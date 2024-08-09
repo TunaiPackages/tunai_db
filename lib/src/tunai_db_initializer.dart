@@ -70,8 +70,27 @@ class TunaiDBInitializer {
       }
 
       TunaiDBLogger.logInit('* Found Database path -> $path');
-      // Ensure the parent directory exists
-      await Directory(databasePath).create(recursive: true);
+      bool databaseExist = await databaseExists(path);
+
+      if (!databaseExist) {
+        // Make sure the directory exists
+
+        try {
+          await Directory(path).create(recursive: true);
+          print('* Created directory at $path');
+          // await File(path).writeAsString('flushing', flush: true);
+          // print('* Flushed directory at $path');
+        } catch (e) {
+          print('Failed to create directory at path : $path, $e');
+          rethrow;
+        }
+
+        try {
+          await deleteDatabase(path);
+        } catch (e) {
+          print('Failed to delete database at path : $path, $e');
+        }
+      }
 
       if (Platform.isWindows) {
         _database = await databaseFactory.openDatabase(
