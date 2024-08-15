@@ -57,7 +57,6 @@ class TunaiDBInitializer {
     try {
       String dbName = '${_dbName}_$uniqueKey.db';
       TunaiDBLogger.logInit('* TunaiDB Initializing -> $dbName...');
-      final databasePath = await getDatabasesPath();
       String path;
       if (Platform.isWindows) {
         sqfliteFfiInit();
