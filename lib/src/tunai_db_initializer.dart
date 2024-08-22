@@ -16,6 +16,13 @@ class TunaiDBInitializer {
     return _instance;
   }
 
+  static TunaiDBLogger _logger = TunaiDBLogger();
+  static TunaiDBLogger get logger => _logger;
+
+  static void setLogger(TunaiDBLogger logger) {
+    _logger = logger;
+  }
+
   TunaiDBInitializer._internal();
 
   void setTables(List<DBTable> tables) {
@@ -48,7 +55,7 @@ class TunaiDBInitializer {
       await _initDB(uniqueKey);
       await updateTables(_database!, _allTables);
     } catch (e) {
-      TunaiDBLogger.logInit('TunaiDB Failed to initialize. $e');
+      _logger.logInit('TunaiDB Failed to initialize. $e');
       rethrow;
     }
   }
@@ -56,7 +63,7 @@ class TunaiDBInitializer {
   Future<void> _initDB(String uniqueKey) async {
     try {
       String dbName = '${_dbName}_$uniqueKey.db';
-      TunaiDBLogger.logInit('* TunaiDB Initializing -> $dbName...');
+      _logger.logInit('* TunaiDB Initializing -> $dbName...');
       String path;
       if (Platform.isWindows) {
         sqfliteFfiInit();
@@ -68,7 +75,7 @@ class TunaiDBInitializer {
         path = p.join(databasePath, dbName);
       }
 
-      TunaiDBLogger.logInit('* Found Database path -> $path');
+      _logger.logInit('* Found Database path -> $path');
       bool databaseExist = await databaseExists(path);
 
       if (!databaseExist) {
@@ -107,10 +114,10 @@ class TunaiDBInitializer {
         );
       }
 
-      TunaiDBLogger.logInit(
+      _logger.logInit(
           '* TunaiDB successfully open database ($dbName) : $_database');
     } catch (e) {
-      TunaiDBLogger.logInit('* TunaiDB failed to open database : $e');
+      _logger.logInit('* TunaiDB failed to open database : $e');
       rethrow;
     }
   }
@@ -133,7 +140,7 @@ class TunaiDBInitializer {
       List<Future> listFuture = [];
 
       for (var table in _allTables) {
-        TunaiDBLogger.logInit(
+        _logger.logInit(
           '* TunaiDB creating table...\n${table.createTableQuery}\n',
         );
         listFuture.add(db.execute(table.createTableQuery));
@@ -141,20 +148,20 @@ class TunaiDBInitializer {
 
       await Future.wait(listFuture);
     } catch (e) {
-      TunaiDBLogger.logInit('* TunaiDB failed to create table $e');
+      _logger.logInit('* TunaiDB failed to create table $e');
       rethrow;
     }
   }
 
   Future<int> deleteTable(TunaiDB db) async {
-    TunaiDBLogger.logInit(
+    _logger.logInit(
       '* TunaiDB deleting table ${db.table.tableName}...',
     );
     return await _database!.delete(db.table.tableName);
   }
 
   Future<void> updateTables(Database db, List<DBTable> dbTables) async {
-    TunaiDBLogger.logInit('* TunaiDB checking for tables\'s updates...');
+    _logger.logInit('* TunaiDB checking for tables\'s updates...');
 
     try {
       List<Map<String, dynamic>> tables = await db
@@ -198,7 +205,7 @@ class TunaiDBInitializer {
         );
       }
     } catch (e) {
-      TunaiDBLogger.logInit('* TunaiDB failed to update tables. $e');
+      _logger.logInit('* TunaiDB failed to update tables. $e');
       rethrow;
     }
   }
@@ -214,7 +221,7 @@ Future<void> addMissingTable({
       .toList();
 
   if (missingTables.isNotEmpty) {
-    TunaiDBLogger.logInit(
+    TunaiDBInitializer.logger.logInit(
         '* -> Adding missing tables...\n${missingTables.map((table) => table.tableName).join('\n')}');
     List<Future> listFuture = [];
     for (var table in missingTables) {
@@ -234,7 +241,7 @@ Future<void> dropExtraTable({
       .toList();
 
   if (extraTables.isNotEmpty) {
-    TunaiDBLogger.logInit(
+    TunaiDBInitializer.logger.logInit(
         '* -> Dropping extra tables...\n${extraTables.map((table) => table['name']).join('\n')}');
     List<Future> listFuture = [];
     for (var table in extraTables) {
@@ -254,11 +261,11 @@ Future<void> addMissingColumns({
   }).toList();
   if (missingColumns
       .any((element) => element.isPrimaryKey || element.reference != null)) {
-    TunaiDBLogger.logInit(
+    TunaiDBInitializer.logger.logInit(
         '* -> Missing Columns contain primary or foreign key, rebuilding table ${table.tableName}...');
     await rebuildTable(db: db, table: table, columns: columns);
   } else if (missingColumns.isNotEmpty) {
-    TunaiDBLogger.logInit(
+    TunaiDBInitializer.logger.logInit(
         '* -> Adding missing columns to table ${table.tableName}...\n${missingColumns.map((field) => field.fieldDefinition).join('\n')}');
     List<Future> listFuture = [];
     for (var field in missingColumns) {
@@ -307,13 +314,13 @@ Future<void> dropExtraColumns({
     }
     return field.isPrimaryKey || field.reference != null;
   })) {
-    TunaiDBLogger.logInit(
+    TunaiDBInitializer.logger.logInit(
         '* -> Dropping Columns contain primary or foreign key, rebuilding table ${table.tableName}...');
     await rebuildTable(db: db, table: table, columns: columns);
   } else if (droppingColumns.isNotEmpty) {
     List<Future> listFuture = [];
     for (Map<String, dynamic> column in droppingColumns) {
-      TunaiDBLogger.logInit(
+      TunaiDBInitializer.logger.logInit(
           '* -> Dropping column ${column['name']} from table ${table.tableName}...');
       listFuture.add(db.execute(
           "ALTER TABLE ${table.tableName} DROP COLUMN ${column['name']}"));

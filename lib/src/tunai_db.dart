@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 
+import 'model/db_field.dart';
 import 'model/db_table.dart';
 import 'model/db_data_converter.dart';
 import 'model/db_filter.dart';
@@ -22,32 +23,37 @@ abstract class TunaiDB<T> {
   }) async {
     final currentTime = DateTime.now();
     final primaryKeyField = table.primaryKeyField;
-
+    bool isSupportUpsert = await _isSqliteVersionSupportUpsert();
     await _db.transaction((txn) async {
       final batch = txn.batch();
       for (var item in list) {
-        // batch.insert(
-        //   table.tableName,
-        //   toMap?.call(item) ?? dbTableDataConverter.toMap(item),
-        //   conflictAlgorithm: conflictAlgorithm,
-        // );
+        final dataMap = toMap?.call(item) ?? dbTableDataConverter.toMap(item);
 
-        String query = _getUpsertRawQuery(
-          dataMap: toMap?.call(item) ?? dbTableDataConverter.toMap(item),
-          primaryFieldName: primaryKeyField.fieldName,
-        );
-        if (debugPrint) {
-          TunaiDBLogger.logAction(query);
+        if (isSupportUpsert) {
+          String query = _getUpsertRawQuery(
+            dataMap: dataMap,
+            primaryFieldName: primaryKeyField.fieldName,
+          );
+          if (debugPrint) {
+            TunaiDBInitializer.logger.logAction(query);
+          }
+
+          batch.execute(query);
+        } else {
+          manualUpsert(
+            txn: txn,
+            primaryKeyField: primaryKeyField,
+            dataMap: dataMap,
+            batch: batch,
+          );
         }
-
-        batch.execute(query);
       }
 
       await batch.commit();
     });
 
     if (debugPrint) {
-      TunaiDBLogger.logAction(
+      TunaiDBInitializer.logger.logAction(
           'Inserted ${list.length} items to Table(${table.tableName}) took : ${DateTime.now().difference(currentTime).inMilliseconds} ms');
     }
   }
@@ -56,31 +62,36 @@ abstract class TunaiDB<T> {
     final currentTime = DateTime.now();
     final primaryKeyField = table.primaryKeyField;
 
+    bool isSupportUpsert = await _isSqliteVersionSupportUpsert();
+
     await _db.transaction((txn) async {
       final batch = txn.batch();
       for (var item in list) {
-        // batch.insert(
-        //   table.tableName,
-        //   toMap?.call(item) ?? dbTableDataConverter.toMap(item),
-        //   conflictAlgorithm: conflictAlgorithm,
-        // );
+        if (isSupportUpsert) {
+          String query = _getUpsertRawQuery(
+            dataMap: item,
+            primaryFieldName: primaryKeyField.fieldName,
+          );
+          if (debugPrint) {
+            TunaiDBInitializer.logger.logAction('Upsert json query : \n$query');
+          }
 
-        String query = _getUpsertRawQuery(
-          dataMap: item,
-          primaryFieldName: primaryKeyField.fieldName,
-        );
-        if (debugPrint) {
-          TunaiDBLogger.logAction('Upsert json query : \n$query');
+          batch.execute(query);
+        } else {
+          manualUpsert(
+            txn: txn,
+            primaryKeyField: primaryKeyField,
+            dataMap: item,
+            batch: batch,
+          );
         }
-
-        batch.execute(query);
       }
 
       await batch.commit();
     });
 
     if (debugPrint) {
-      TunaiDBLogger.logAction(
+      TunaiDBInitializer.logger.logAction(
           'Inserted ${list.length} items to Table(${table.tableName}) took : ${DateTime.now().difference(currentTime).inMilliseconds} ms');
     }
   }
@@ -91,18 +102,48 @@ abstract class TunaiDB<T> {
     Map<String, Object?> Function(T data)? toMap,
   }) async {
     if (debugPrint) {
-      TunaiDBLogger.logAction('Inserting : $data to Table(${table.tableName})');
+      TunaiDBInitializer.logger
+          .logAction('Inserting : $data to Table(${table.tableName})');
     }
     final primaryKeyField = table.primaryKeyField;
-    await _db.rawQuery(_getUpsertRawQuery(
-      dataMap: toMap?.call(data) ?? dbTableDataConverter.toMap(data),
-      primaryFieldName: primaryKeyField.fieldName,
-    ));
-    // await _db.insert(
-    //   table.tableName,
-    //   toMap?.call(data) ?? dbTableDataConverter.toMap(data),
-    //   conflictAlgorithm: conflictAlgorithm,
-    // );
+    bool isSupportUpsert = await _isSqliteVersionSupportUpsert();
+    final dataMap = toMap?.call(data) ?? dbTableDataConverter.toMap(data);
+    if (isSupportUpsert) {
+      await _db.rawQuery(_getUpsertRawQuery(
+        dataMap: dataMap,
+        primaryFieldName: primaryKeyField.fieldName,
+      ));
+    } else {
+      // Step 1: Fetch the existing row if it exists
+      final existingRows = await _db.query(
+        table.tableName,
+        where: '${primaryKeyField.fieldName} = ?',
+        whereArgs: [primaryKeyField.fieldName],
+      );
+
+      if (existingRows.isNotEmpty) {
+        // Merge the existing row with the new data
+        final existingData = existingRows.first;
+        final updatedData = Map<String, Object?>.from(existingData)
+          ..addAll(dataMap);
+
+        // Step 2: Update the row with the merged data
+        await _db.update(
+          table.tableName,
+          updatedData,
+          where: '${primaryKeyField.fieldName} = ?',
+          whereArgs: [primaryKeyField.fieldName],
+        );
+      } else {
+        // Step 3: Insert the item if it doesn't exist
+        await _db.insert(
+          table.tableName,
+          dataMap,
+          conflictAlgorithm:
+              ConflictAlgorithm.ignore, // Avoids duplicate insertion errors
+        );
+      }
+    }
   }
 
   Future<int> getCount() async {
@@ -113,7 +154,7 @@ abstract class TunaiDB<T> {
 
   Future<void> delete(List<DBFilter> filters) async {
     if (debugPrint) {
-      TunaiDBLogger.logAction(
+      TunaiDBInitializer.logger.logAction(
           'Deleting db data match($filters) in Table(${table.tableName})');
     }
     await _db.delete(
@@ -127,7 +168,7 @@ abstract class TunaiDB<T> {
     required List<DBFilter> filters,
   }) async {
     if (debugPrint) {
-      TunaiDBLogger.logAction(
+      TunaiDBInitializer.logger.logAction(
           'Update db data match($filters) in Table(${table.tableName})');
     }
     await _db.update(
@@ -185,7 +226,8 @@ abstract class TunaiDB<T> {
     }
 
     if (debugPrint) {
-      TunaiDBLogger.logAction('innerJoin fetch ${table.tableName} -> $query');
+      TunaiDBInitializer.logger
+          .logAction('innerJoin fetch ${table.tableName} -> $query');
     }
 
     List<Map<String, dynamic>> results = await _db.rawQuery(query);
@@ -226,12 +268,49 @@ abstract class TunaiDB<T> {
         .toList();
 
     if (debugPrint) {
-      TunaiDBLogger.logAction(
+      TunaiDBInitializer.logger.logAction(
         'Fetched from db (${table.tableName}) ${parsedList.length} items took : ${DateTime.now().difference(currentTime).inMilliseconds} ms',
       );
     }
 
     return parsedList;
+  }
+
+  void manualUpsert({
+    required Transaction txn,
+    required DBField primaryKeyField,
+    required Map<String, Object?> dataMap,
+    required Batch batch,
+  }) async {
+    // Step 1: Fetch the existing row if it exists
+    final existingRows = await txn.query(
+      table.tableName,
+      where: '${primaryKeyField.fieldName} = ?',
+      whereArgs: [primaryKeyField.fieldName],
+    );
+
+    if (existingRows.isNotEmpty) {
+      // Merge the existing row with the new data
+      final existingData = existingRows.first;
+      final updatedData = Map<String, Object?>.from(existingData)
+        ..addAll(dataMap);
+
+      // Step 2: Update the row with the merged data
+      batch.update(
+        table.tableName,
+        updatedData,
+        where: '${primaryKeyField.fieldName} = ?',
+        whereArgs: [primaryKeyField.fieldName],
+      );
+    } else {
+      // Step 3: Insert the item if it doesn't exist
+      batch.insert(
+        table.tableName,
+        dataMap,
+        conflictAlgorithm:
+            ConflictAlgorithm.ignore, // Avoids duplicate insertion errors
+      );
+    }
   }
 
   String _getUpsertRawQuery({
@@ -260,6 +339,24 @@ abstract class TunaiDB<T> {
   ''';
 
     return rawQuery;
+  }
+
+  Future<bool> _isSqliteVersionSupportUpsert() async {
+    // Get SQLite version
+    var result = await _db.rawQuery('SELECT sqlite_version()');
+    var sqliteVersion = result.first.values.first as String;
+
+    // Split the version number into major, minor, patch
+    var versionParts = sqliteVersion.split('.');
+    var major = int.parse(versionParts[0]);
+    var minor = int.parse(versionParts[1]);
+
+    // If the SQLite version is 3.24.0 or higher, use ON CONFLICT DO UPDATE
+    if (major > 3 || (major == 3 && minor >= 24)) {
+      return true;
+    } else {
+      return false;
+    }
   }
 }
 
