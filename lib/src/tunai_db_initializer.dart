@@ -51,6 +51,7 @@ class TunaiDBInitializer {
   }
 
   Future<void> initDatabase(String uniqueKey) async {
+    //updated
     try {
       await _initDB(uniqueKey);
       await updateTables(_database!, _allTables);
