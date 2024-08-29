@@ -99,7 +99,7 @@ class TunaiDBInitializer {
       }
 
       if (Platform.isWindows) {
-        _database = await databaseFactory.openDatabase(
+        _database = await databaseFactoryFfi.openDatabase(
           path,
           options: OpenDatabaseOptions(
             version: 1,
