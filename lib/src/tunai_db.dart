@@ -301,7 +301,7 @@ abstract class TunaiDB<T> {
     final existingRows = await txn.query(
       table.tableName,
       where: '${primaryKeyField.fieldName} = ?',
-      whereArgs: [primaryKeyField.fieldName],
+      whereArgs: [dataMap[primaryKeyField.fieldName]],
     );
 
     if (existingRows.isNotEmpty) {
