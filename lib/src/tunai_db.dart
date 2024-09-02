@@ -74,6 +74,7 @@ abstract class TunaiDB<T> {
     final primaryKeyField = table.primaryKeyField;
 
     bool isSupportUpsert = await _isSqliteVersionSupportUpsert();
+    log('Inserting jsons ${list.length}, isSupportUpsert : ${isSupportUpsert}, primaryKeyField : ${primaryKeyField.fieldName}');
 
     await _db.transaction((txn) async {
       final batch = txn.batch();
@@ -83,9 +84,7 @@ abstract class TunaiDB<T> {
             dataMap: item,
             primaryFieldName: primaryKeyField.fieldName,
           );
-          if (debugPrint) {
-            TunaiDBInitializer.logger.logAction('Upsert json query : \n$query');
-          }
+          log('Upsert json query : \n$query');
 
           batch.execute(query);
         } else {
