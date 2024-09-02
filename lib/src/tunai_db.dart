@@ -45,7 +45,7 @@ abstract class TunaiDB<T> {
 
           batch.execute(query);
         } else {
-          manualUpsert(
+          await manualUpsert(
             txn: txn,
             primaryKeyField: primaryKeyField,
             dataMap: dataMap,
@@ -92,10 +92,7 @@ abstract class TunaiDB<T> {
       await batch.commit();
     });
 
-    if (debugPrint) {
-      TunaiDBInitializer.logger.logAction(
-          'Inserted ${list.length} items to Table(${table.tableName}) took : ${DateTime.now().difference(currentTime).inMilliseconds} ms');
-    }
+    log('Inserted ${list.length} items to Table(${table.tableName}) took : ${DateTime.now().difference(currentTime).inMilliseconds} ms');
   }
 
   Future<void> insert(
@@ -278,7 +275,7 @@ abstract class TunaiDB<T> {
     return parsedList;
   }
 
-  void manualUpsert({
+  Future<void> manualUpsert({
     required Transaction txn,
     required DBField primaryKeyField,
     required Map<String, Object?> dataMap,
