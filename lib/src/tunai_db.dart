@@ -315,7 +315,9 @@ abstract class TunaiDB<T> {
         table.tableName,
         updatedData,
         where: '${primaryKeyField.fieldName} = ?',
-        whereArgs: [primaryKeyField.fieldName],
+        whereArgs: [
+          updatedData[primaryKeyField.fieldName],
+        ],
       );
       log('Merged Rows : $updatedData');
     } else {
