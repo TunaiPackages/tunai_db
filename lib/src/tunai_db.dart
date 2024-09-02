@@ -21,6 +21,10 @@ abstract class TunaiDB<T> {
     }
   }
 
+  void logError(String message) {
+    TunaiDBInitializer.logger.logAction('${table.tableName} ! $message');
+  }
+
   Future<void> insertList(
     List<T> list, {
     Map<String, Object?> Function(T data)? toMap,
@@ -34,7 +38,12 @@ abstract class TunaiDB<T> {
     await _db.transaction((txn) async {
       final batch = txn.batch();
       for (var item in list) {
-        final dataMap = toMap?.call(item) ?? dbTableDataConverter.toMap(item);
+        late final dataMap;
+        try {
+          dataMap = toMap?.call(item) ?? dbTableDataConverter.toMap(item);
+        } catch (e) {
+          logError('Failed to convert data to map : $e\n$item');
+        }
 
         if (isSupportUpsert) {
           String query = _getUpsertRawQuery(
@@ -261,18 +270,26 @@ abstract class TunaiDB<T> {
         offset: offset,
       );
     }
+    try {
+      final List<T> parsedList = list.map((e) {
+        try {
+          return fromMap?.call(e) ?? dbTableDataConverter.fromMap(e);
+        } catch (e) {
+          logError('Failed to parse data from map : $e\n$e');
+          rethrow;
+        }
+      }).toList();
 
-    final List<T> parsedList = list
-        .map((e) => fromMap?.call(e) ?? dbTableDataConverter.fromMap(e))
-        .toList();
+      if (debugPrint) {
+        TunaiDBInitializer.logger.logAction(
+          'Fetched from db (${table.tableName}) ${parsedList.length} items took : ${DateTime.now().difference(currentTime).inMilliseconds} ms',
+        );
+      }
 
-    if (debugPrint) {
-      TunaiDBInitializer.logger.logAction(
-        'Fetched from db (${table.tableName}) ${parsedList.length} items took : ${DateTime.now().difference(currentTime).inMilliseconds} ms',
-      );
+      return parsedList;
+    } catch (e) {
+      rethrow;
     }
-
-    return parsedList;
   }
 
   Future<void> manualUpsert({
