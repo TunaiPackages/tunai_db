@@ -298,15 +298,12 @@ abstract class TunaiDB<T> {
     required Map<String, Object?> dataMap,
     required Batch batch,
   }) async {
-    log('Manual Upsert');
     // Step 1: Fetch the existing row if it exists
     final existingRows = await txn.query(
       table.tableName,
       where: '${primaryKeyField.fieldName} = ?',
       whereArgs: [primaryKeyField.fieldName],
     );
-
-    log('Existing Rows : $existingRows');
 
     if (existingRows.isNotEmpty) {
       // Merge the existing row with the new data
