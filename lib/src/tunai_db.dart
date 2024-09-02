@@ -271,11 +271,11 @@ abstract class TunaiDB<T> {
       );
     }
     try {
-      final List<T> parsedList = list.map((e) {
+      final List<T> parsedList = list.map((item) {
         try {
-          return fromMap?.call(e) ?? dbTableDataConverter.fromMap(e);
+          return fromMap?.call(item) ?? dbTableDataConverter.fromMap(item);
         } catch (e) {
-          logError('Failed to parse data from map : $e\n$e');
+          logError('Failed to parse data from map : $e\n$item');
           rethrow;
         }
       }).toList();
