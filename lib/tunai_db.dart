@@ -7,3 +7,4 @@ export 'src/model/db_sorter.dart';
 export 'src/model/db_field_type.dart';
 export 'src/model/db_reference.dart';
 export 'src/model/db_field.dart';
+export 'src/tunai_db_logger.dart';
