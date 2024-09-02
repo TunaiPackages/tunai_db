@@ -15,6 +15,12 @@ abstract class TunaiDB<T> {
 
   bool get debugPrint => false;
 
+  void log(String message) {
+    if (debugPrint) {
+      TunaiDBInitializer.logger.logAction('${table.tableName} -> $message');
+    }
+  }
+
   Future<void> insertList(
     List<T> list, {
     Map<String, Object?> Function(T data)? toMap,
@@ -24,6 +30,7 @@ abstract class TunaiDB<T> {
     final currentTime = DateTime.now();
     final primaryKeyField = table.primaryKeyField;
     bool isSupportUpsert = await _isSqliteVersionSupportUpsert();
+    log('Inserting list ${list.length}, isSupportUpsert : ${isSupportUpsert}, primaryKeyField : $primaryKeyField');
     await _db.transaction((txn) async {
       final batch = txn.batch();
       for (var item in list) {
@@ -34,9 +41,7 @@ abstract class TunaiDB<T> {
             dataMap: dataMap,
             primaryFieldName: primaryKeyField.fieldName,
           );
-          if (debugPrint) {
-            TunaiDBInitializer.logger.logAction(query);
-          }
+          log(query);
 
           batch.execute(query);
         } else {
@@ -52,10 +57,7 @@ abstract class TunaiDB<T> {
       await batch.commit();
     });
 
-    if (debugPrint) {
-      TunaiDBInitializer.logger.logAction(
-          'Inserted ${list.length} items to Table(${table.tableName}) took : ${DateTime.now().difference(currentTime).inMilliseconds} ms');
-    }
+    log('Inserted ${list.length} items to Table(${table.tableName}) took : ${DateTime.now().difference(currentTime).inMilliseconds} ms');
   }
 
   Future<void> insertJsons(List<Map<String, dynamic>> list) async {
@@ -282,12 +284,15 @@ abstract class TunaiDB<T> {
     required Map<String, Object?> dataMap,
     required Batch batch,
   }) async {
+    log('Manual Upsert');
     // Step 1: Fetch the existing row if it exists
     final existingRows = await txn.query(
       table.tableName,
       where: '${primaryKeyField.fieldName} = ?',
       whereArgs: [primaryKeyField.fieldName],
     );
+
+    log('Existing Rows : $existingRows');
 
     if (existingRows.isNotEmpty) {
       // Merge the existing row with the new data
@@ -302,6 +307,7 @@ abstract class TunaiDB<T> {
         where: '${primaryKeyField.fieldName} = ?',
         whereArgs: [primaryKeyField.fieldName],
       );
+      log('Merged Rows : $updatedData');
     } else {
       // Step 3: Insert the item if it doesn't exist
       batch.insert(
@@ -310,6 +316,8 @@ abstract class TunaiDB<T> {
         conflictAlgorithm:
             ConflictAlgorithm.ignore, // Avoids duplicate insertion errors
       );
+
+      log('Insert Rows : $dataMap');
     }
   }
 
