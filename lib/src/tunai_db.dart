@@ -80,7 +80,7 @@ abstract class TunaiDB<T> {
 
           batch.execute(query);
         } else {
-          manualUpsert(
+          await manualUpsert(
             txn: txn,
             primaryKeyField: primaryKeyField,
             dataMap: item,
