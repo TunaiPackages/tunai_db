@@ -34,7 +34,7 @@ abstract class TunaiDB<T> {
     final currentTime = DateTime.now();
     final primaryKeyField = table.primaryKeyField;
     bool isSupportUpsert = await _isSqliteVersionSupportUpsert();
-    log('Inserting list ${list.length}, isSupportUpsert : ${isSupportUpsert}, primaryKeyField : $primaryKeyField');
+    log('Inserting list ${list.length}, isSupportUpsert : ${isSupportUpsert}, primaryKeyField : ${primaryKeyField.fieldName}');
     await _db.transaction((txn) async {
       final batch = txn.batch();
       for (var item in list) {
