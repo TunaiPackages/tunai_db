@@ -193,17 +193,43 @@ class TunaiDBInitializer {
         List<Map<String, dynamic>> columns =
             await db.rawQuery("PRAGMA table_info('${table['name']}')");
 
+        for (var column in columns) {
+          DBField? dbField = dbTable.fields.firstWhereOrNull(
+            (field) => field.fieldName == column['name'],
+          );
+          if (dbField == null) {
+            TunaiDBInitializer.logger.logInit(
+                '* -> Dropping column ${column['name']} from table ${dbTable.tableName}...');
+            db.execute(
+                "ALTER TABLE ${dbTable.tableName} DROP COLUMN ${column['name']}");
+          } else {
+            bool fieldUpdated =
+                (dbField.isPrimaryKey ? 1 : 0) != column['pk'] ||
+                    dbField.fieldType.query != column['type'];
+            if (fieldUpdated) {
+              TunaiDBInitializer.logger.logInit(
+                  '* -> Updating column ${column['name']} in table ${dbTable.tableName}...');
+              db.execute(
+                  "ALTER TABLE ${dbTable.tableName} RENAME TO ${dbTable.tableName}_old");
+              db.execute(dbTable.createTableQuery);
+              db.execute(
+                  "INSERT INTO ${dbTable.tableName} SELECT * FROM ${dbTable.tableName}_old");
+              db.execute("DROP TABLE ${dbTable.tableName}_old");
+            }
+          }
+        }
+
         addMissingColumns(
           db: db,
           table: dbTable,
           columns: columns,
         );
 
-        dropExtraColumns(
-          db: db,
-          table: dbTable,
-          columns: columns,
-        );
+        // dropExtraColumns(
+        //   db: db,
+        //   table: dbTable,
+        //   columns: columns,
+        // );
       }
     } catch (e) {
       _logger.logInit('* TunaiDB failed to update tables. $e');

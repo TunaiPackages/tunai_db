@@ -185,6 +185,67 @@ abstract class TunaiDB<T> {
     );
   }
 
+  Future<List<Map<String, dynamic>>> fetchWith({
+    List<DBFilter> filters = const [],
+    required List<DBTable> tables,
+    bool debugPrint = false,
+  }) async {
+    // Validate that at least one table is provided
+    if (tables.isEmpty) {
+      throw ArgumentError('At least one table must be provided.');
+    }
+
+    // Start constructing the SQL query
+    String query = 'SELECT ';
+
+    // Add fields from all specified tables
+    for (int i = 0; i < tables.length; i++) {
+      final table = tables[i];
+      for (final field in table.fields) {
+        query +=
+            '${table.tableName}.${field.fieldName} AS ${table.tableName}_${field.fieldName}';
+        if (i < tables.length - 1 || field != table.fields.last) {
+          query += ', ';
+        }
+      }
+    }
+
+    // Add FROM clause
+    query += ' FROM ${table.tableName}';
+
+    // Add LEFT JOIN clauses for remaining tables
+    for (int i = 1; i < tables.length; i++) {
+      final table = tables[i];
+      final joinField = table.foreignFields.isNotEmpty
+          ? table.foreignFields[0] // Assuming the first foreign field for join
+          : null;
+
+      if (joinField != null) {
+        final refTable = joinField.reference!.table;
+        query +=
+            ' LEFT JOIN ${table.tableName} ON ${tables[0].tableName}.${joinField.fieldName} = ${table.tableName}.${joinField.reference!.fieldName}';
+      }
+    }
+
+    // Add filters if provided
+    if (filters.isNotEmpty) {
+      String whereClause =
+          ' WHERE ' + filters.map((filter) => filter.getQuery()).join(' AND ');
+      query += whereClause;
+    }
+    print('Generated FetchWith SQL Query: $query');
+    // Debug print the query if needed
+    if (debugPrint) {
+      TunaiDBInitializer.logger
+          .logAction('Generated FetchWith SQL Query: $query');
+    }
+
+    // Execute the query and return results
+    List<Map<String, dynamic>> results = await _db.rawQuery(query);
+
+    return results;
+  }
+
   Future<List<Map<String, dynamic>>> fetchWithInnerJoin({
     List<DBFilter> filters = const [],
     bool debugPrint = false,
