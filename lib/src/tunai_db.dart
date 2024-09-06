@@ -339,6 +339,54 @@ abstract class TunaiDB<T> {
     }
   }
 
+  Future<List<T>> fetchByFieldValues({
+    T Function(Map<String, Object?> map)? fromMap,
+    DBSorter? sorter,
+    required String fieldName,
+    required List<dynamic> values,
+  }) async {
+    try {
+      final currentTime = DateTime.now();
+      String query =
+          'SELECT * FROM ${table.tableName} WHERE $fieldName IN (${values.map((e) => '$e').join(',')})';
+      if (debugPrint) {
+        TunaiDBInitializer.logger
+            .logAction('fetchByFieldValues query : $query');
+      }
+      List<Map<String, dynamic>> list = await _db.rawQuery(query);
+      final List<T> parsedList = list.map((item) {
+        try {
+          return fromMap?.call(item) ?? dbTableDataConverter.fromMap(item);
+        } catch (e) {
+          logError('Failed to parse data from map : $e\n$item');
+          rethrow;
+        }
+      }).toList();
+
+      if (debugPrint) {
+        TunaiDBInitializer.logger.logAction(
+          'Fetched from db (${table.tableName}) ${parsedList.length} items took : ${DateTime.now().difference(currentTime).inMilliseconds} ms',
+        );
+      }
+
+      return parsedList;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<double> getSum(String fieldName) async {
+    try {
+      List<Map<String, dynamic>> content =
+          await _db.rawQuery('SELECT SUM($fieldName) FROM ${table.tableName}');
+      double sum = content.first.values.first as double;
+
+      return sum;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<List<Map<String, Object?>>> rawQuery(String query) async {
     return await _db.rawQuery(query);
   }
