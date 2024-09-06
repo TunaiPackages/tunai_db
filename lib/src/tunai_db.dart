@@ -195,36 +195,22 @@ abstract class TunaiDB<T> {
       throw ArgumentError('At least one table must be provided.');
     }
 
-    // Start constructing the SQL query
-    String query = 'SELECT ';
+    String query = 'SELECT ${table.tableName}.*';
 
-    // Add fields from all specified tables
     for (int i = 0; i < tables.length; i++) {
       final table = tables[i];
-      for (final field in table.fields) {
-        query +=
-            '${table.tableName}.${field.fieldName} AS ${table.tableName}_${field.fieldName}';
-        if (i < tables.length - 1 || field != table.fields.last) {
-          query += ', ';
-        }
-      }
+      query += ',${table.tableName}.*';
     }
 
     // Add FROM clause
     query += ' FROM ${table.tableName}';
 
     // Add LEFT JOIN clauses for remaining tables
-    for (int i = 1; i < tables.length; i++) {
-      final table = tables[i];
-      final joinField = table.foreignFields.isNotEmpty
-          ? table.foreignFields[0] // Assuming the first foreign field for join
-          : null;
+    for (int i = 0; i < tables.length; i++) {
+      final joinedTable = tables[i];
 
-      if (joinField != null) {
-        final refTable = joinField.reference!.table;
-        query +=
-            ' LEFT JOIN ${table.tableName} ON ${tables[0].tableName}.${joinField.fieldName} = ${table.tableName}.${joinField.reference!.fieldName}';
-      }
+      query +=
+          ' LEFT JOIN ${joinedTable.tableName} ON ${joinedTable.tableName}.${table.primaryKeyField.fieldName} = ${table.tableName}.${table.primaryKeyField.fieldName}';
     }
 
     // Add filters if provided
