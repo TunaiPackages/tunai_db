@@ -215,8 +215,10 @@ abstract class TunaiDB<T> {
 
     // Add filters if provided
     if (filters.isNotEmpty) {
-      String whereClause =
-          ' WHERE ' + filters.map((filter) => filter.getQuery()).join(' AND ');
+      String whereClause = ' WHERE ' +
+          filters
+              .map((filter) => '${table.tableName}.${filter.getQuery()}')
+              .join(' AND ');
       query += whereClause;
     }
     print('Generated FetchWith SQL Query: $query');
