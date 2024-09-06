@@ -54,7 +54,7 @@ abstract class TunaiDB<T> {
 
           batch.execute(query);
         } else {
-          await manualUpsert(
+          await _manualUpsert(
             txn: txn,
             primaryKeyField: primaryKeyField,
             dataMap: dataMap,
@@ -88,7 +88,7 @@ abstract class TunaiDB<T> {
 
           batch.execute(query);
         } else {
-          await manualUpsert(
+          await _manualUpsert(
             txn: txn,
             primaryKeyField: primaryKeyField,
             dataMap: item,
@@ -221,7 +221,6 @@ abstract class TunaiDB<T> {
               .join(' AND ');
       query += whereClause;
     }
-    print('Generated FetchWith SQL Query: $query');
     // Debug print the query if needed
     if (debugPrint) {
       TunaiDBInitializer.logger
@@ -340,7 +339,11 @@ abstract class TunaiDB<T> {
     }
   }
 
-  Future<void> manualUpsert({
+  Future<List<Map<String, Object?>>> rawQuery(String query) async {
+    return await _db.rawQuery(query);
+  }
+
+  Future<void> _manualUpsert({
     required Transaction txn,
     required DBField primaryKeyField,
     required Map<String, Object?> dataMap,
