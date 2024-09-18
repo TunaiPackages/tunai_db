@@ -50,10 +50,10 @@ class TunaiDBInitializer {
     return _database!;
   }
 
-  Future<void> initDatabase(String uniqueKey) async {
+  Future<void> initDatabase(String uniqueKey, {bool resetDB = false}) async {
     //updated
     try {
-      await _initDB(uniqueKey);
+      await _initDB(uniqueKey, resetDB: resetDB);
       await updateTables(_database!, _allTables);
     } catch (e) {
       _logger.logInit('TunaiDB Failed to initialize. $e');
@@ -61,7 +61,7 @@ class TunaiDBInitializer {
     }
   }
 
-  Future<void> _initDB(String uniqueKey) async {
+  Future<void> _initDB(String uniqueKey, {bool resetDB = false}) async {
     try {
       String dbName = '${_dbName}_$uniqueKey.db';
       _logger.logInit('* TunaiDB Initializing -> $dbName...');
@@ -70,6 +70,9 @@ class TunaiDBInitializer {
         sqfliteFfiInit();
         databaseFactory = databaseFactoryFfi;
         final databasePath = await pathP.getApplicationSupportDirectory();
+        path = p.join(databasePath.path, dbName);
+      } else if (Platform.isIOS || Platform.isMacOS) {
+        final databasePath = await pathP.getLibraryDirectory();
         path = p.join(databasePath.path, dbName);
       } else {
         final databasePath = await getDatabasesPath();
@@ -92,6 +95,12 @@ class TunaiDBInitializer {
           rethrow;
         }
 
+        try {
+          await deleteDatabase(path);
+        } catch (e) {
+          print('Failed to delete database at path : $path, $e');
+        }
+      } else if (resetDB) {
         try {
           await deleteDatabase(path);
         } catch (e) {
