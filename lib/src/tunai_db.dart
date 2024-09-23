@@ -170,6 +170,14 @@ abstract class TunaiDB<T> {
     );
   }
 
+  Future<void> deleteAll() async {
+    if (debugPrint) {
+      TunaiDBInitializer.logger
+          .logAction('Deleting all data in Table(${table.tableName})');
+    }
+    await _db.delete(table.tableName);
+  }
+
   Future<void> update({
     required T newData,
     required List<DBFilter> filters,
