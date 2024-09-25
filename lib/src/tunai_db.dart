@@ -1,4 +1,5 @@
 import 'package:sqflite/sqflite.dart';
+import 'package:tunai_db/src/model/db_filter_join_type.dart';
 
 import 'model/db_field.dart';
 import 'model/db_table.dart';
@@ -244,6 +245,7 @@ abstract class TunaiDB<T> {
   Future<List<Map<String, dynamic>>> fetchWithInnerJoin({
     List<DBFilter> filters = const [],
     bool debugPrint = false,
+    DBFilterJoinType filterJoinType = DBFilterJoinType.and,
   }) async {
     String query = 'SELECT ';
 
@@ -283,7 +285,7 @@ abstract class TunaiDB<T> {
       String whereClause = 'WHERE ' +
           filters
               .map((filter) => filter.getQuery(nameTag: 'ori.'))
-              .join(' AND ');
+              .join(' ${filterJoinType.queryOperator} ');
       // TunaiDBLogger.logAction('where clause : $whereClause');
       query += whereClause;
     }
@@ -304,6 +306,7 @@ abstract class TunaiDB<T> {
     DBSorter? sorter,
     int? offset,
     int? limit,
+    DBFilterJoinType filterJoinType = DBFilterJoinType.and,
   }) async {
     final currentTime = DateTime.now();
     List<Map<String, dynamic>> list = [];
@@ -318,7 +321,9 @@ abstract class TunaiDB<T> {
     } else {
       list = await _db.query(
         table.tableName,
-        where: filters.map((e) => e.getQuery()).join(' AND '),
+        where: filters
+            .map((e) => e.getQuery())
+            .join(' ${filterJoinType.queryOperator} '),
         // whereArgs: filter.matchings,
         orderBy: sorter?.getSortQuery(),
         limit: limit,
