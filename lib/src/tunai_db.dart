@@ -362,6 +362,9 @@ abstract class TunaiDB<T> {
       final currentTime = DateTime.now();
       String query =
           'SELECT * FROM ${table.tableName} WHERE $fieldName IN (${values.map((e) => '$e').join(',')})';
+      if (sorter != null) {
+        query += ' ${sorter.getSortQuery()}';
+      }
       if (debugPrint) {
         TunaiDBInitializer.logger
             .logAction('fetchByFieldValues query : $query');
