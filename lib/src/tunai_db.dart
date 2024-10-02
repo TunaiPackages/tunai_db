@@ -363,7 +363,7 @@ abstract class TunaiDB<T> {
       String query =
           'SELECT * FROM ${table.tableName} WHERE $fieldName IN (${values.map((e) => '$e').join(',')})';
       if (sorter != null) {
-        query += ' ${sorter.getSortQuery()}';
+        query += ' ORDER BY ${sorter.getSortQuery()}';
       }
       if (debugPrint) {
         TunaiDBInitializer.logger
