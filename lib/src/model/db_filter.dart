@@ -35,7 +35,7 @@ class DBFilter {
   final Object matched;
   final DBFilterType filterType;
 
-  DBFilter({
+  const DBFilter({
     required this.fieldName,
     required this.matched,
     this.filterType = DBFilterType.equal,

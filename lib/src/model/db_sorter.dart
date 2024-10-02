@@ -7,7 +7,7 @@ class DBSorter {
   final String fieldName;
   final DBSortType sortType;
 
-  DBSorter({
+  const DBSorter({
     required this.fieldName,
     required this.sortType,
   });
