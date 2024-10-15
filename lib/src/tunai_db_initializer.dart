@@ -177,13 +177,13 @@ class TunaiDBInitializer {
       List<Map<String, dynamic>> tables = await db
           .rawQuery("SELECT name FROM sqlite_master WHERE type='table'");
 
-      addMissingTable(
+      await addMissingTable(
         db: db,
         dbTables: dbTables,
         currentTables: tables,
       );
 
-      dropExtraTable(
+      await dropExtraTable(
         db: db,
         dbTables: dbTables,
         currentTables: tables,
@@ -228,7 +228,7 @@ class TunaiDBInitializer {
           }
         }
 
-        addMissingColumns(
+        await addMissingColumns(
           db: db,
           table: dbTable,
           columns: columns,
