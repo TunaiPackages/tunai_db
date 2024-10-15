@@ -147,16 +147,13 @@ class TunaiDBInitializer {
 
   Future<void> _onCreate(Database db, int version) async {
     try {
-      List<Future> listFuture = [];
-
       for (var table in _allTables) {
         _logger.logInit(
           '* TunaiDB creating table...\n${table.createTableQuery}\n',
         );
-        listFuture.add(db.execute(table.createTableQuery));
-      }
 
-      await Future.wait(listFuture);
+        await db.execute(table.createTableQuery);
+      }
     } catch (e) {
       _logger.logInit('* TunaiDB failed to create table $e');
       rethrow;
