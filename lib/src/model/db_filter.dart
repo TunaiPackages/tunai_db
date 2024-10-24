@@ -42,6 +42,8 @@ class DBFilter {
   });
 
   String getQuery({String nameTag = ''}) {
-    return '$nameTag$fieldName ${filterType.comparisonOperator} $matched';
+    String formattedMatched =
+        matched is String ? "'$matched'" : matched.toString();
+    return '$nameTag$fieldName ${filterType.comparisonOperator} $formattedMatched';
   }
 }
