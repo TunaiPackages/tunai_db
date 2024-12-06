@@ -154,9 +154,22 @@ abstract class TunaiDB<T> {
     }
   }
 
-  Future<int> getCount() async {
-    final List<Map<String, Object?>> data =
-        await _db.rawQuery('SELECT COUNT(*) FROM ${table.tableName};');
+  Future<int> getCount({
+    List<DBFilter> filters = const [],
+    DBFilterJoinType filterJoinType = DBFilterJoinType.and,
+  }) async {
+    String whereClause = '';
+
+    if (filters.isNotEmpty) {
+      whereClause = 'WHERE ' +
+          filters
+              .map((e) => e.getQuery())
+              .join(' ${filterJoinType.queryOperator} ');
+    }
+
+    final List<Map<String, Object?>> data = await _db
+        .rawQuery('SELECT COUNT(*) FROM ${table.tableName} $whereClause;');
+
     return data.first['COUNT(*)'] as int;
   }
 
