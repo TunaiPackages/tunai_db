@@ -9,7 +9,7 @@ class DBField {
   final bool isAutoIncrement;
   final bool isNotNull;
   final DBReference? reference;
-
+  final bool indexing;
   const DBField({
     required this.fieldName,
     required this.fieldType,
@@ -18,9 +18,10 @@ class DBField {
     this.isNotNull = true,
     this.defaultValue,
     this.reference,
+    this.indexing = false,
   });
 
-  String get fieldDefinition {
+  String get fieldQuery {
     String definition = '$fieldName ${fieldType.query}';
     if (isPrimaryKey) {
       definition += ' PRIMARY KEY';

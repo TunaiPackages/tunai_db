@@ -11,9 +11,12 @@ class DBTable {
 
   const DBTable({required this.tableName, required this.fields});
 
+  List<DBField> get indexingFields =>
+      fields.where((field) => field.indexing && !field.isPrimaryKey).toList();
+
   String get createTableQuery {
     String query = 'CREATE TABLE $tableName (';
-    query += fields.map((field) => field.fieldDefinition).join(', ');
+    query += fields.map((field) => field.fieldQuery).join(', ');
     bool hasForeignReference = fields.any((field) => field.reference != null);
     if (hasForeignReference) {
       for (var field in fields) {
@@ -24,6 +27,17 @@ class DBTable {
       }
     }
     query += ')';
+
+    return query;
+  }
+
+  String get createIndexQuery {
+    String query = '';
+
+    for (var field in indexingFields) {
+      query +=
+          'CREATE INDEX ${tableName}_${field.fieldName}_index ON $tableName (${field.fieldName});';
+    }
 
     return query;
   }
