@@ -43,6 +43,8 @@ class TunaiDBInitializer {
   }
 
   Database? _database;
+
+  bool get hasInit => _database != null;
   Database get database {
     if (_database == null) {
       throw Exception('Tunai Database is not initialized');
