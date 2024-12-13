@@ -50,6 +50,10 @@ class TunaiDBInitializer {
     return _database!;
   }
 
+  void initExistingDatabase(Database database) {
+    _database = database;
+  }
+
   Future<void> initDatabase(String uniqueKey, {bool resetDB = false}) async {
     //updated
     try {
