@@ -54,11 +54,17 @@ class TunaiDBInitializer {
     _database = database;
   }
 
-  Future<void> initDatabase(String uniqueKey, {bool resetDB = false}) async {
+  Future<void> initDatabase(
+    String uniqueKey, {
+    bool resetDB = false,
+    bool updateDB = true,
+  }) async {
     //updated
     try {
       await _initDB(uniqueKey, resetDB: resetDB);
-      await updateTables(_database!, _allTables);
+      if (updateDB) {
+        await updateTables(_database!, _allTables);
+      }
     } catch (e) {
       _logger.logInit('TunaiDB Failed to initialize. $e');
       rethrow;
