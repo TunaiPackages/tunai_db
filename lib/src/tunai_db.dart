@@ -371,15 +371,17 @@ abstract class TunaiDB<T> {
     required String fieldName,
     required List<dynamic> values,
     List<DBFilter>? filters,
+    DBFilterJoinType filterJoinType = DBFilterJoinType.and,
   }) async {
     try {
       final currentTime = DateTime.now();
       String query =
           'SELECT * FROM ${table.tableName} WHERE $fieldName IN (${values.map((e) => '$e').join(',')})';
       if (filters != null && filters.isNotEmpty) {
+        query += ' AND ';
         query += filters
-            .map((f) => '${f.filterType.comparisonOperator} ${f.getQuery()}')
-            .join('');
+            .map((f) => '${f.getQuery()}')
+            .join(' ${filterJoinType.queryOperator} ');
       }
       if (sorter != null) {
         query += ' ORDER BY ${sorter.getSortQuery()}';
