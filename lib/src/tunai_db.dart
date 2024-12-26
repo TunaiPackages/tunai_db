@@ -370,11 +370,17 @@ abstract class TunaiDB<T> {
     DBSorter? sorter,
     required String fieldName,
     required List<dynamic> values,
+    List<DBFilter>? filters,
   }) async {
     try {
       final currentTime = DateTime.now();
       String query =
           'SELECT * FROM ${table.tableName} WHERE $fieldName IN (${values.map((e) => '$e').join(',')})';
+      if (filters != null && filters.isNotEmpty) {
+        query += filters
+            .map((f) => '${f.filterType.comparisonOperator} ${f.getQuery()}')
+            .join('');
+      }
       if (sorter != null) {
         query += ' ORDER BY ${sorter.getSortQuery()}';
       }
