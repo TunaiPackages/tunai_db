@@ -30,7 +30,30 @@ enum DBFilterType {
   }
 }
 
-class DBFilter {
+///DBFilter or DBFilterIn
+abstract class BaseDBFilter {
+  const BaseDBFilter();
+  String getQuery();
+}
+
+class DBFilterIn extends BaseDBFilter {
+  final String fieldName;
+  final List<Object> matched;
+
+  const DBFilterIn({
+    required this.fieldName,
+    required this.matched,
+  });
+
+  @override
+  String getQuery({String nameTag = ''}) {
+    String formattedMatched =
+        matched.map((e) => e is String ? "'$e'" : e.toString()).join(', ');
+    return '$nameTag$fieldName IN ($formattedMatched)';
+  }
+}
+
+class DBFilter extends BaseDBFilter {
   final String fieldName;
   final Object matched;
   final DBFilterType filterType;
@@ -41,6 +64,7 @@ class DBFilter {
     this.filterType = DBFilterType.equal,
   });
 
+  @override
   String getQuery({String nameTag = ''}) {
     String formattedMatched =
         matched is String ? "'$matched'" : matched.toString();

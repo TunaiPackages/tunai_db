@@ -208,7 +208,7 @@ abstract class TunaiDB<T> {
   }
 
   Future<List<Map<String, dynamic>>> fetchWithTables({
-    List<({DBFilter filter, DBTable matchedTable})> filters = const [],
+    List<({BaseDBFilter filter, DBTable matchedTable})> filters = const [],
     required List<({DBTable table, String key, DBTable matchedTable})>
         tableRecords,
     bool debugPrint = false,
@@ -337,7 +337,7 @@ abstract class TunaiDB<T> {
   }
 
   Future<List<T>> fetch({
-    List<DBFilter> filters = const [],
+    List<BaseDBFilter> filters = const [],
     T Function(Map<String, Object?> map)? fromMap,
     DBSorter? sorter,
     int? offset,
