@@ -230,14 +230,15 @@ abstract class TunaiDB<T> {
       final joinedTableR = tableRecords[i];
       final joinedTable = joinedTableR.table;
 
+      bool isLastTable = i == tableRecords.length - 1;
+
       for (var field in joinedTable.fields) {
         bool isLast = field == joinedTable.fields.last;
         query +=
             '${joinedTable.tableName}.${field.fieldName} AS ${joinedTable.tableName}_${field.fieldName}';
 
-        if (!isLast) {
-          query += ', ';
-        }
+        if (isLast && isLastTable) continue;
+        query += ', ';
       }
     }
 
