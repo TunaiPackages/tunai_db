@@ -255,6 +255,59 @@ abstract class TunaiDB<T> {
     return results;
   }
 
+  Future<List<Map<String, dynamic>>> fetchWithTables({
+    List<DBFilter> filters = const [],
+    required List<({DBTable table, String key, String matched})> tableRecords,
+    bool debugPrint = false,
+  }) async {
+    // Validate that at least one table is provided
+    if (tableRecords.isEmpty) {
+      throw ArgumentError('At least one table must be provided.');
+    }
+
+    String query = 'SELECT ${table.tableName}.*';
+
+    for (int i = 0; i < tableRecords.length; i++) {
+      final joinedTableR = tableRecords[i];
+      final joinedTable = joinedTableR.table;
+
+      query += ',${joinedTable.tableName}.*';
+    }
+
+    // Add FROM clause
+    query += ' FROM ${table.tableName}';
+
+    // Add LEFT JOIN clauses for remaining tables
+    for (int i = 0; i < tableRecords.length; i++) {
+      final joinedTableR = tableRecords[i];
+      final joinedTable = joinedTableR.table;
+      final joinedKey = joinedTableR.key;
+      final matchedKey = joinedTableR.matched;
+
+      query +=
+          ' LEFT JOIN ${joinedTable.tableName} ON ${joinedTable.tableName}.$joinedKey = ${table.tableName}.$matchedKey';
+    }
+
+    // Add filters if provided
+    if (filters.isNotEmpty) {
+      String whereClause = ' WHERE ' +
+          filters
+              .map((filter) => '${table.tableName}.${filter.getQuery()}')
+              .join(' AND ');
+      query += whereClause;
+    }
+    // Debug print the query if needed
+    if (debugPrint) {
+      TunaiDBInitializer.logger
+          .logAction('Generated FetchWith SQL Query: $query');
+    }
+
+    // Execute the query and return results
+    List<Map<String, dynamic>> results = await _db.rawQuery(query);
+
+    return results;
+  }
+
   Future<List<Map<String, dynamic>>> fetchWithInnerJoin({
     List<DBFilter> filters = const [],
     bool debugPrint = false,
