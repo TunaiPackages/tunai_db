@@ -217,7 +217,7 @@ abstract class TunaiDB<T> {
       throw ArgumentError('At least one table must be provided.');
     }
 
-    String query = 'SELECT ${table.tableName}.*';
+    String query = 'SELECT ';
 
     for (var field in table.fields) {
       query +=
