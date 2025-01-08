@@ -207,54 +207,6 @@ abstract class TunaiDB<T> {
     );
   }
 
-  Future<List<Map<String, dynamic>>> fetchWith({
-    List<DBFilter> filters = const [],
-    required List<DBTable> tables,
-    bool debugPrint = false,
-  }) async {
-    // Validate that at least one table is provided
-    if (tables.isEmpty) {
-      throw ArgumentError('At least one table must be provided.');
-    }
-
-    String query = 'SELECT ${table.tableName}.*';
-
-    for (int i = 0; i < tables.length; i++) {
-      final table = tables[i];
-      query += ',${table.tableName}.*';
-    }
-
-    // Add FROM clause
-    query += ' FROM ${table.tableName}';
-
-    // Add LEFT JOIN clauses for remaining tables
-    for (int i = 0; i < tables.length; i++) {
-      final joinedTable = tables[i];
-
-      query +=
-          ' LEFT JOIN ${joinedTable.tableName} ON ${joinedTable.tableName}.${table.primaryKeyField.fieldName} = ${table.tableName}.${table.primaryKeyField.fieldName}';
-    }
-
-    // Add filters if provided
-    if (filters.isNotEmpty) {
-      String whereClause = ' WHERE ' +
-          filters
-              .map((filter) => '${table.tableName}.${filter.getQuery()}')
-              .join(' AND ');
-      query += whereClause;
-    }
-    // Debug print the query if needed
-    if (debugPrint) {
-      TunaiDBInitializer.logger
-          .logAction('Generated FetchWith SQL Query: $query');
-    }
-
-    // Execute the query and return results
-    List<Map<String, dynamic>> results = await _db.rawQuery(query);
-
-    return results;
-  }
-
   Future<List<Map<String, dynamic>>> fetchWithTables({
     List<DBFilter> filters = const [],
     required List<({DBTable table, String key, String matched})> tableRecords,
@@ -267,11 +219,25 @@ abstract class TunaiDB<T> {
 
     String query = 'SELECT ${table.tableName}.*';
 
+    for (var field in table.fields) {
+      query +=
+          '${table.tableName}.${field.fieldName} AS ${table.tableName}_${field.fieldName}' +
+              ', ';
+    }
+
     for (int i = 0; i < tableRecords.length; i++) {
       final joinedTableR = tableRecords[i];
       final joinedTable = joinedTableR.table;
 
-      query += ',${joinedTable.tableName}.*';
+      for (var field in joinedTable.fields) {
+        bool isLast = field == joinedTable.fields.last;
+        query +=
+            '${joinedTable.tableName}.${field.fieldName} AS ${joinedTable.tableName}_${field.fieldName}';
+
+        if (!isLast) {
+          query += ', ';
+        }
+      }
     }
 
     // Add FROM clause
