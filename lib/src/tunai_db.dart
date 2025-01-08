@@ -278,6 +278,7 @@ abstract class TunaiDB<T> {
     return results;
   }
 
+  @Deprecated('Use fetchWithTables instead')
   Future<List<Map<String, dynamic>>> fetchWithInnerJoin({
     List<DBFilter> filters = const [],
     bool debugPrint = false,
@@ -388,6 +389,7 @@ abstract class TunaiDB<T> {
     }
   }
 
+  @Deprecated('Use fetch with DBFilterIn instead')
   Future<List<T>> fetchByFieldValues({
     T Function(Map<String, Object?> map)? fromMap,
     DBSorter? sorter,
