@@ -208,10 +208,11 @@ abstract class TunaiDB<T> {
   }
 
   Future<List<Map<String, dynamic>>> fetchWithTables({
-    List<DBFilter> filters = const [],
+    List<({DBFilter filter, DBTable matchedTable})> filters = const [],
     required List<({DBTable table, String key, DBTable matchedTable})>
         tableRecords,
     bool debugPrint = false,
+    DBFilterJoinType filterJoinType = DBFilterJoinType.and,
   }) async {
     // Validate that at least one table is provided
     if (tableRecords.isEmpty) {
@@ -259,15 +260,16 @@ abstract class TunaiDB<T> {
     // Add filters if provided
     if (filters.isNotEmpty) {
       String whereClause = ' WHERE ' +
-          filters
-              .map((filter) => '${table.tableName}.${filter.getQuery()}')
-              .join(' AND ');
+          filters.map((filterR) {
+            final filter = filterR.filter;
+            final matchedTable = filterR.matchedTable;
+            return '${matchedTable.tableName}.${filter.getQuery()}';
+          }).join(' ${filterJoinType.queryOperator} ');
       query += whereClause;
     }
     // Debug print the query if needed
     if (debugPrint) {
-      TunaiDBInitializer.logger
-          .logAction('Generated FetchWith SQL Query: $query');
+      TunaiDBInitializer.logger.logAction('TunaiDB FetchWithTables :\n$query');
     }
 
     // Execute the query and return results
