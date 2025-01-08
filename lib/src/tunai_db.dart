@@ -209,7 +209,7 @@ abstract class TunaiDB<T> {
 
   Future<List<Map<String, dynamic>>> fetchWithTables({
     List<DBFilter> filters = const [],
-    required List<({DBTable table, String key, DBTable? matchedTable})>
+    required List<({DBTable table, String key, DBTable matchedTable})>
         tableRecords,
     bool debugPrint = false,
   }) async {
@@ -250,7 +250,7 @@ abstract class TunaiDB<T> {
       final joinedTableR = tableRecords[i];
       final joinedTable = joinedTableR.table;
       final joinedKey = joinedTableR.key;
-      final DBTable matchedTable = joinedTableR.matchedTable ?? table;
+      final DBTable matchedTable = joinedTableR.matchedTable;
 
       query +=
           ' LEFT JOIN ${joinedTable.tableName} ON ${joinedTable.tableName}.$joinedKey = ${matchedTable.tableName}.$joinedKey';
