@@ -173,7 +173,7 @@ abstract class TunaiDB<T> {
     return data.first['COUNT(*)'] as int;
   }
 
-  Future<void> delete(List<DBFilter> filters) async {
+  Future<void> delete(List<BaseDBFilter> filters) async {
     if (debugPrint) {
       TunaiDBInitializer.logger.logAction(
           'Deleting db data match($filters) in Table(${table.tableName})');
