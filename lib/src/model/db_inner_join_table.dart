@@ -7,6 +7,8 @@ class DBInnerJoinTable {
   final String? matchedKey;
   final String? outputKey;
 
+  String get outputName => outputKey ?? table.tableName;
+
   DBInnerJoinTable({
     required this.key,
     required this.table,
