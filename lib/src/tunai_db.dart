@@ -253,10 +253,14 @@ abstract class TunaiDB<T> {
       final joinedKey = joinedTableR.key;
       String matchedKey = joinedTableR.matchedKey ??
           '${joinedTableR.matchedTable.tableName}.${joinedKey}';
-      ;
 
-      query +=
-          ' LEFT JOIN ${joinedTable.tableName} ON ${joinedTableR.outputName}.$joinedKey = $matchedKey';
+      query += ' LEFT JOIN ${joinedTable.tableName}';
+
+      if (joinedTableR.outputKey != null) {
+        query += ' AS ${joinedTableR.outputKey}';
+      }
+
+      query += ' ON ${table.tableName}.${joinedKey} = $matchedKey';
     }
 
     // Add filters if provided
