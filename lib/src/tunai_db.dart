@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:tunai_db/src/model/db_filter_join_type.dart';
+import 'package:tunai_db/src/model/db_inner_join_table.dart';
 
 import 'model/db_field.dart';
 import 'model/db_table.dart';
@@ -209,8 +210,7 @@ abstract class TunaiDB<T> {
 
   Future<List<Map<String, dynamic>>> fetchWithTables({
     List<({BaseDBFilter filter, DBTable matchedTable})> filters = const [],
-    required List<({DBTable table, String key, DBTable matchedTable})>
-        tableRecords,
+    required List<DBInnerJoinTable> tableRecords,
     bool debugPrint = false,
     DBFilterJoinType filterJoinType = DBFilterJoinType.and,
   }) async {
@@ -251,10 +251,12 @@ abstract class TunaiDB<T> {
       final joinedTableR = tableRecords[i];
       final joinedTable = joinedTableR.table;
       final joinedKey = joinedTableR.key;
-      final DBTable matchedTable = joinedTableR.matchedTable;
+      String matchedKey = joinedTableR.matchedKey ??
+          '${joinedTableR.matchedTable.tableName}.${joinedKey}';
+      ;
 
       query +=
-          ' LEFT JOIN ${joinedTable.tableName} ON ${joinedTable.tableName}.$joinedKey = ${matchedTable.tableName}.$joinedKey';
+          ' LEFT JOIN ${joinedTable.tableName} ON ${joinedTable.tableName}.$joinedKey = $matchedKey';
     }
 
     // Add filters if provided
