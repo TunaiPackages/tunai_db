@@ -258,9 +258,10 @@ abstract class TunaiDB<T> {
 
       if (joinedTableR.outputKey != null) {
         query += ' AS ${joinedTableR.outputKey}';
+        query += ' ON ${joinedTableR.outputKey}.${joinedKey} = $matchedKey';
+      } else {
+        query += ' ON ${joinedTable.tableName}.${joinedKey} = $matchedKey';
       }
-
-      query += ' ON ${table.tableName}.${joinedKey} = $matchedKey';
     }
 
     // Add filters if provided
