@@ -5,11 +5,13 @@ class DBInnerJoinTable {
   final DBTable table;
   final DBTable matchedTable;
   final String? matchedKey;
+  final String? outputKey;
 
   DBInnerJoinTable({
     required this.key,
     required this.table,
     required this.matchedTable,
     this.matchedKey,
+    this.outputKey,
   });
 }

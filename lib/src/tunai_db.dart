@@ -235,8 +235,9 @@ abstract class TunaiDB<T> {
 
       for (var field in joinedTable.fields) {
         bool isLast = field == joinedTable.fields.last;
+        String outputName = joinedTableR.outputKey ?? joinedTable.tableName;
         query +=
-            '${joinedTable.tableName}.${field.fieldName} AS ${joinedTable.tableName}_${field.fieldName}';
+            '${joinedTable.tableName}.${field.fieldName} AS ${outputName}_${field.fieldName}';
 
         if (isLast && isLastTable) continue;
         query += ', ';
