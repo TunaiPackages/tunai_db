@@ -9,3 +9,4 @@ export 'src/model/db_reference.dart';
 export 'src/model/db_field.dart';
 export 'src/tunai_db_logger.dart';
 export 'src/model/db_filter_join_type.dart';
+export 'src/model/db_inner_join_table.dart';
