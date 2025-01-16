@@ -454,6 +454,7 @@ abstract class TunaiDB<T> {
       List<Map<String, dynamic>> content =
           await _db.rawQuery('SELECT SUM($fieldName) FROM ${table.tableName}');
       double sum = content.first.values.first as double;
+
       return sum;
     } catch (e) {
       rethrow;
