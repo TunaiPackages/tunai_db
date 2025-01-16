@@ -132,42 +132,43 @@ abstract class TunaiDB<T> {
     final dataMap = toMap?.call(data) ?? dbTableDataConverter.toMap(data);
 
     await TunaiDBTrxnQueue().add(() async {
-      if (isSupportUpsert) {
-        await _db.rawQuery(_getUpsertRawQuery(
-          dataMap: dataMap,
-          primaryFieldName: primaryKeyField.fieldName,
-        ));
-      } else {
-        // Step 1: Fetch the existing row if it exists
-        final existingRows = await _db.query(
-          table.tableName,
-          where: '${primaryKeyField.fieldName} = ?',
-          whereArgs: [primaryKeyField.fieldName],
-        );
-
-        if (existingRows.isNotEmpty) {
-          // Merge the existing row with the new data
-          final existingData = existingRows.first;
-          final updatedData = Map<String, Object?>.from(existingData)
-            ..addAll(dataMap);
-
-          // Step 2: Update the row with the merged data
-          await _db.update(
+      await _db.transaction((txn) async {
+        if (isSupportUpsert) {
+          await txn.rawQuery(_getUpsertRawQuery(
+            dataMap: dataMap,
+            primaryFieldName: primaryKeyField.fieldName,
+          ));
+        } else {
+          // Step 1: Fetch the existing row if it exists
+          final existingRows = await txn.query(
             table.tableName,
-            updatedData,
             where: '${primaryKeyField.fieldName} = ?',
             whereArgs: [primaryKeyField.fieldName],
           );
-        } else {
-          // Step 3: Insert the item if it doesn't exist
-          await _db.insert(
-            table.tableName,
-            dataMap,
-            conflictAlgorithm:
-                ConflictAlgorithm.ignore, // Avoids duplicate insertion errors
-          );
+
+          if (existingRows.isNotEmpty) {
+            // Merge the existing row with the new data
+            final existingData = existingRows.first;
+            final updatedData = Map<String, Object?>.from(existingData)
+              ..addAll(dataMap);
+
+            // Step 2: Update the row with the merged data
+            await txn.update(
+              table.tableName,
+              updatedData,
+              where: '${primaryKeyField.fieldName} = ?',
+              whereArgs: [primaryKeyField.fieldName],
+            );
+          } else {
+            // Step 3: Insert the item if it doesn't exist
+            await txn.insert(
+              table.tableName,
+              dataMap,
+              conflictAlgorithm: ConflictAlgorithm.ignore,
+            );
+          }
         }
-      }
+      });
     });
 
     logAction('Inserted : $data to Table(${table.tableName})');
