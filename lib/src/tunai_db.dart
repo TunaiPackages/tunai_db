@@ -16,16 +16,12 @@ abstract class TunaiDB<T> {
   Database get _db => TunaiDBInitializer().database;
   DBDataConverter<T> get dbTableDataConverter;
 
-  bool get debugPrint => false;
-
-  void log(String message) {
-    if (debugPrint) {
-      TunaiDBInitializer.logger.logAction('${table.tableName} -> $message');
-    }
+  void logAction(String message) {
+    TunaiDBInitializer.logger.logAction('${table.tableName} -> $message');
   }
 
   void logError(String message) {
-    TunaiDBInitializer.logger.logAction('${table.tableName} ! $message');
+    TunaiDBInitializer.logger.logError('${table.tableName} ! $message');
   }
 
   Future<void> insertList(
@@ -39,7 +35,8 @@ abstract class TunaiDB<T> {
       final currentTime = DateTime.now();
       final primaryKeyField = table.primaryKeyField;
       bool isSupportUpsert = await _isSqliteVersionSupportUpsert();
-      log('Inserting list ${list.length}, isSupportUpsert: $isSupportUpsert, primaryKeyField: ${primaryKeyField.fieldName}');
+      logAction(
+          'Inserting list ${list.length}, isSupportUpsert: $isSupportUpsert, primaryKeyField: ${primaryKeyField.fieldName}');
 
       try {
         await _db.transaction((txn) async {
@@ -63,7 +60,7 @@ abstract class TunaiDB<T> {
                   dataMap: dataMap,
                   primaryFieldName: primaryKeyField.fieldName,
                 );
-                log(query);
+                logAction(query);
                 batch.execute(query);
               } else {
                 await _manualUpsert(
@@ -76,7 +73,7 @@ abstract class TunaiDB<T> {
             }
 
             await batch.commit();
-            log('Processed batch ${i + 1} to $end');
+            logAction('Processed batch ${i + 1} to $end');
           }
         });
       } catch (e) {
@@ -84,7 +81,8 @@ abstract class TunaiDB<T> {
         rethrow;
       }
 
-      log('Inserted ${list.length} items to Table(${table.tableName}) took: ${DateTime.now().difference(currentTime).inMilliseconds} ms');
+      logAction(
+          'Inserted ${list.length} items to Table(${table.tableName}) took: ${DateTime.now().difference(currentTime).inMilliseconds} ms');
     });
   }
 
@@ -93,7 +91,8 @@ abstract class TunaiDB<T> {
     final primaryKeyField = table.primaryKeyField;
 
     bool isSupportUpsert = await _isSqliteVersionSupportUpsert();
-    log('Inserting jsons ${list.length}, isSupportUpsert : ${isSupportUpsert}, primaryKeyField : ${primaryKeyField.fieldName}');
+    logAction(
+        'Inserting jsons ${list.length}, isSupportUpsert : ${isSupportUpsert}, primaryKeyField : ${primaryKeyField.fieldName}');
 
     await _db.transaction((txn) async {
       final batch = txn.batch();
@@ -103,7 +102,7 @@ abstract class TunaiDB<T> {
             dataMap: item,
             primaryFieldName: primaryKeyField.fieldName,
           );
-          log('Upsert json query : \n$query');
+          logAction('Upsert json query : \n$query');
 
           batch.execute(query);
         } else {
@@ -119,7 +118,8 @@ abstract class TunaiDB<T> {
       await batch.commit();
     });
 
-    log('Inserted ${list.length} items to Table(${table.tableName}) took : ${DateTime.now().difference(currentTime).inMilliseconds} ms');
+    logAction(
+        'Inserted ${list.length} items to Table(${table.tableName}) took : ${DateTime.now().difference(currentTime).inMilliseconds} ms');
   }
 
   Future<void> insert(
@@ -127,10 +127,7 @@ abstract class TunaiDB<T> {
     ConflictAlgorithm conflictAlgorithm = ConflictAlgorithm.replace,
     Map<String, Object?> Function(T data)? toMap,
   }) async {
-    if (debugPrint) {
-      TunaiDBInitializer.logger
-          .logAction('Inserting : $data to Table(${table.tableName})');
-    }
+    logAction('Inserting : $data to Table(${table.tableName})');
     final primaryKeyField = table.primaryKeyField;
     bool isSupportUpsert = await _isSqliteVersionSupportUpsert();
     final dataMap = toMap?.call(data) ?? dbTableDataConverter.toMap(data);
@@ -170,6 +167,8 @@ abstract class TunaiDB<T> {
         );
       }
     }
+
+    logAction('Inserted : $data to Table(${table.tableName})');
   }
 
   Future<int> getCount({
@@ -192,10 +191,7 @@ abstract class TunaiDB<T> {
   }
 
   Future<void> delete(List<BaseDBFilter> filters) async {
-    if (debugPrint) {
-      TunaiDBInitializer.logger.logAction(
-          'Deleting db data match($filters) in Table(${table.tableName})');
-    }
+    logAction('Deleting db data match($filters) in Table(${table.tableName})');
     await _db.delete(
       table.tableName,
       where: filters.map((e) => e.getQuery()).join(' AND '),
@@ -203,10 +199,7 @@ abstract class TunaiDB<T> {
   }
 
   Future<void> deleteAll() async {
-    if (debugPrint) {
-      TunaiDBInitializer.logger
-          .logAction('Deleting all data in Table(${table.tableName})');
-    }
+    logAction('Deleting all data in Table(${table.tableName})');
     await _db.delete(table.tableName);
   }
 
@@ -214,10 +207,7 @@ abstract class TunaiDB<T> {
     required T newData,
     required List<DBFilter> filters,
   }) async {
-    if (debugPrint) {
-      TunaiDBInitializer.logger.logAction(
-          'Update db data match($filters) in Table(${table.tableName})');
-    }
+    logAction('Update db data match($filters) in Table(${table.tableName})');
     await _db.update(
       table.tableName,
       dbTableDataConverter.toMap(newData),
@@ -401,11 +391,9 @@ abstract class TunaiDB<T> {
         }
       }).toList();
 
-      if (debugPrint) {
-        TunaiDBInitializer.logger.logAction(
-          'Fetched from db (${table.tableName}) ${parsedList.length} items took : ${DateTime.now().difference(currentTime).inMilliseconds} ms',
-        );
-      }
+      logAction(
+        'Fetched from db (${table.tableName}) ${parsedList.length} items took : ${DateTime.now().difference(currentTime).inMilliseconds} ms',
+      );
 
       return parsedList;
     } catch (e) {
@@ -435,10 +423,7 @@ abstract class TunaiDB<T> {
       if (sorter != null) {
         query += ' ORDER BY ${sorter.getSortQuery()}';
       }
-      if (debugPrint) {
-        TunaiDBInitializer.logger
-            .logAction('fetchByFieldValues query : $query');
-      }
+      logAction('fetchByFieldValues query : $query');
       List<Map<String, dynamic>> list = await _db.rawQuery(query);
       final List<T> parsedList = list.map((item) {
         try {
@@ -449,11 +434,9 @@ abstract class TunaiDB<T> {
         }
       }).toList();
 
-      if (debugPrint) {
-        TunaiDBInitializer.logger.logAction(
-          'Fetched from db (${table.tableName}) ${parsedList.length} items took : ${DateTime.now().difference(currentTime).inMilliseconds} ms',
-        );
-      }
+      logAction(
+        'Fetched from db (${table.tableName}) ${parsedList.length} items took : ${DateTime.now().difference(currentTime).inMilliseconds} ms',
+      );
 
       return parsedList;
     } catch (e) {
@@ -505,7 +488,7 @@ abstract class TunaiDB<T> {
           updatedData[primaryKeyField.fieldName],
         ],
       );
-      log('Merged Rows : $updatedData');
+      logAction('Merged Rows : $updatedData');
     } else {
       // Step 3: Insert the item if it doesn't exist
       batch.insert(
@@ -515,7 +498,7 @@ abstract class TunaiDB<T> {
             ConflictAlgorithm.ignore, // Avoids duplicate insertion errors
       );
 
-      log('Insert Rows : $dataMap');
+      logAction('Insert Rows : $dataMap');
     }
   }
 

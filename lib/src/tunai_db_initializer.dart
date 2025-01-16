@@ -16,7 +16,7 @@ class TunaiDBInitializer {
     return _instance;
   }
 
-  static TunaiDBLogger _logger = TunaiDBLogger();
+  static TunaiDBLogger _logger = TunaiDBLoggerImpl();
   static TunaiDBLogger get logger => _logger;
 
   static void setLogger(TunaiDBLogger logger) {
