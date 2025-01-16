@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-interface class TunaiDBLogger {
+abstract class TunaiDBLogger {
   void logInit(String message) {
     debugPrint('TunaiDB: $message');
   }
