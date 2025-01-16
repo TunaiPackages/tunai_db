@@ -32,43 +32,52 @@ abstract class TunaiDB<T> {
     Map<String, Object?> Function(T data)? toMap,
     List<DBFilter> filters = const [],
     bool debugPrint = false,
+    int batchSize = 1000,
   }) async {
     final currentTime = DateTime.now();
     final primaryKeyField = table.primaryKeyField;
     bool isSupportUpsert = await _isSqliteVersionSupportUpsert();
-    log('Inserting list ${list.length}, isSupportUpsert : ${isSupportUpsert}, primaryKeyField : ${primaryKeyField.fieldName}');
-    await _db.transaction((txn) async {
-      final batch = txn.batch();
-      for (var item in list) {
-        late final dataMap;
-        try {
-          dataMap = toMap?.call(item) ?? dbTableDataConverter.toMap(item);
-        } catch (e) {
-          logError('Failed to convert data to map : $e\n$item');
+    log('Inserting list ${list.length}, isSupportUpsert: $isSupportUpsert, primaryKeyField: ${primaryKeyField.fieldName}');
+
+    for (var i = 0; i < list.length; i += batchSize) {
+      final end = (i + batchSize < list.length) ? i + batchSize : list.length;
+      final chunk = list.sublist(i, end);
+
+      await _db.transaction((txn) async {
+        final batch = txn.batch();
+        for (var item in chunk) {
+          late final Map<String, Object?> dataMap;
+          try {
+            dataMap = toMap?.call(item) ?? dbTableDataConverter.toMap(item);
+          } catch (e) {
+            logError('Failed to convert data to map: $e\n$item');
+            continue;
+          }
+
+          if (isSupportUpsert) {
+            String query = _getUpsertRawQuery(
+              dataMap: dataMap,
+              primaryFieldName: primaryKeyField.fieldName,
+            );
+            log(query);
+            batch.execute(query);
+          } else {
+            await _manualUpsert(
+              txn: txn,
+              primaryKeyField: primaryKeyField,
+              dataMap: dataMap,
+              batch: batch,
+            );
+          }
         }
 
-        if (isSupportUpsert) {
-          String query = _getUpsertRawQuery(
-            dataMap: dataMap,
-            primaryFieldName: primaryKeyField.fieldName,
-          );
-          log(query);
+        await batch.commit();
+      });
 
-          batch.execute(query);
-        } else {
-          await _manualUpsert(
-            txn: txn,
-            primaryKeyField: primaryKeyField,
-            dataMap: dataMap,
-            batch: batch,
-          );
-        }
-      }
+      log('Processed batch ${i + 1} to $end');
+    }
 
-      await batch.commit();
-    });
-
-    log('Inserted ${list.length} items to Table(${table.tableName}) took : ${DateTime.now().difference(currentTime).inMilliseconds} ms');
+    log('Inserted ${list.length} items to Table(${table.tableName}) took: ${DateTime.now().difference(currentTime).inMilliseconds} ms');
   }
 
   Future<void> insertJsons(List<Map<String, dynamic>> list) async {
