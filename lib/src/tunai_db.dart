@@ -44,7 +44,6 @@ abstract class TunaiDB<T> {
                 (i + batchSize < list.length) ? i + batchSize : list.length;
             final chunk = list.sublist(i, end);
 
-            final batch = txn.batch();
             for (var item in chunk) {
               late final Map<String, Object?> dataMap;
               try {
@@ -60,18 +59,18 @@ abstract class TunaiDB<T> {
                   primaryFieldName: primaryKeyField.fieldName,
                 );
 
-                batch.execute(query);
+                txn.batch().execute(query);
               } else {
                 await _manualUpsert(
                   txn: txn,
                   primaryKeyField: primaryKeyField,
                   dataMap: dataMap,
-                  batch: batch,
+                  batch: txn.batch(),
                 );
               }
             }
 
-            await batch.commit();
+            await txn.batch().commit();
           }
         });
       } catch (e) {
