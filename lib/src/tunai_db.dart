@@ -9,6 +9,7 @@ import 'model/db_filter.dart';
 import 'model/db_sorter.dart';
 import 'tunai_db_initializer.dart';
 import 'tunai_db_logger.dart';
+import 'tunai_db_trxn_queue.dart';
 
 abstract class TunaiDB<T> {
   DBTable get table;
@@ -34,17 +35,12 @@ abstract class TunaiDB<T> {
     bool debugPrint = false,
     int batchSize = 1000,
   }) async {
-    final currentTime = DateTime.now();
-    final primaryKeyField = table.primaryKeyField;
-    bool isSupportUpsert = await _isSqliteVersionSupportUpsert();
-    log('Inserting list ${list.length}, isSupportUpsert: $isSupportUpsert, primaryKeyField: ${primaryKeyField.fieldName}');
+    return TunaiDBTrxnQueue().add(() async {
+      final currentTime = DateTime.now();
+      final primaryKeyField = table.primaryKeyField;
+      bool isSupportUpsert = await _isSqliteVersionSupportUpsert();
+      log('Inserting list ${list.length}, isSupportUpsert: $isSupportUpsert, primaryKeyField: ${primaryKeyField.fieldName}');
 
-    // Retry logic
-    int maxRetries = 3;
-    int retryCount = 0;
-    Duration retryDelay = const Duration(milliseconds: 200);
-
-    while (retryCount < maxRetries) {
       try {
         await _db.transaction((txn) async {
           for (var i = 0; i < list.length; i += batchSize) {
@@ -67,6 +63,7 @@ abstract class TunaiDB<T> {
                   dataMap: dataMap,
                   primaryFieldName: primaryKeyField.fieldName,
                 );
+                log(query);
                 batch.execute(query);
               } else {
                 await _manualUpsert(
@@ -82,25 +79,13 @@ abstract class TunaiDB<T> {
             log('Processed batch ${i + 1} to $end');
           }
         });
-
-        // If successful, break the retry loop
-        break;
       } catch (e) {
-        retryCount++;
-        if (e.toString().contains('database is locked') &&
-            retryCount < maxRetries) {
-          log('Database locked, retrying in ${retryDelay.inMilliseconds}ms (attempt $retryCount/$maxRetries)');
-          await Future.delayed(retryDelay);
-          // Increase delay for next retry
-          retryDelay *= 2;
-        } else {
-          // If it's not a lock error or we're out of retries, rethrow
-          rethrow;
-        }
+        logError('Failed to insert list: $e');
+        rethrow;
       }
-    }
 
-    log('Inserted ${list.length} items to Table(${table.tableName}) took: ${DateTime.now().difference(currentTime).inMilliseconds} ms');
+      log('Inserted ${list.length} items to Table(${table.tableName}) took: ${DateTime.now().difference(currentTime).inMilliseconds} ms');
+    });
   }
 
   Future<void> insertJsons(List<Map<String, dynamic>> list) async {
