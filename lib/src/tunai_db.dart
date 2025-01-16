@@ -28,7 +28,6 @@ abstract class TunaiDB<T> {
     List<T> list, {
     Map<String, Object?> Function(T data)? toMap,
     List<DBFilter> filters = const [],
-    bool debugPrint = false,
     int batchSize = 1000,
   }) async {
     return TunaiDBTrxnQueue().add(() async {
@@ -60,7 +59,7 @@ abstract class TunaiDB<T> {
                   dataMap: dataMap,
                   primaryFieldName: primaryKeyField.fieldName,
                 );
-                logAction(query);
+
                 batch.execute(query);
               } else {
                 await _manualUpsert(
@@ -73,7 +72,6 @@ abstract class TunaiDB<T> {
             }
 
             await batch.commit();
-            logAction('Processed batch ${i + 1} to $end');
           }
         });
       } catch (e) {
@@ -94,28 +92,29 @@ abstract class TunaiDB<T> {
     logAction(
         'Inserting jsons ${list.length}, isSupportUpsert : ${isSupportUpsert}, primaryKeyField : ${primaryKeyField.fieldName}');
 
-    await _db.transaction((txn) async {
-      final batch = txn.batch();
-      for (var item in list) {
-        if (isSupportUpsert) {
-          String query = _getUpsertRawQuery(
-            dataMap: item,
-            primaryFieldName: primaryKeyField.fieldName,
-          );
-          logAction('Upsert json query : \n$query');
+    TunaiDBTrxnQueue().add(() async {
+      await _db.transaction((txn) async {
+        final batch = txn.batch();
+        for (var item in list) {
+          if (isSupportUpsert) {
+            String query = _getUpsertRawQuery(
+              dataMap: item,
+              primaryFieldName: primaryKeyField.fieldName,
+            );
 
-          batch.execute(query);
-        } else {
-          await _manualUpsert(
-            txn: txn,
-            primaryKeyField: primaryKeyField,
-            dataMap: item,
-            batch: batch,
-          );
+            batch.execute(query);
+          } else {
+            await _manualUpsert(
+              txn: txn,
+              primaryKeyField: primaryKeyField,
+              dataMap: item,
+              batch: batch,
+            );
+          }
         }
-      }
 
-      await batch.commit();
+        await batch.commit();
+      });
     });
 
     logAction(
@@ -131,42 +130,45 @@ abstract class TunaiDB<T> {
     final primaryKeyField = table.primaryKeyField;
     bool isSupportUpsert = await _isSqliteVersionSupportUpsert();
     final dataMap = toMap?.call(data) ?? dbTableDataConverter.toMap(data);
-    if (isSupportUpsert) {
-      await _db.rawQuery(_getUpsertRawQuery(
-        dataMap: dataMap,
-        primaryFieldName: primaryKeyField.fieldName,
-      ));
-    } else {
-      // Step 1: Fetch the existing row if it exists
-      final existingRows = await _db.query(
-        table.tableName,
-        where: '${primaryKeyField.fieldName} = ?',
-        whereArgs: [primaryKeyField.fieldName],
-      );
 
-      if (existingRows.isNotEmpty) {
-        // Merge the existing row with the new data
-        final existingData = existingRows.first;
-        final updatedData = Map<String, Object?>.from(existingData)
-          ..addAll(dataMap);
-
-        // Step 2: Update the row with the merged data
-        await _db.update(
+    TunaiDBTrxnQueue().add(() async {
+      if (isSupportUpsert) {
+        await _db.rawQuery(_getUpsertRawQuery(
+          dataMap: dataMap,
+          primaryFieldName: primaryKeyField.fieldName,
+        ));
+      } else {
+        // Step 1: Fetch the existing row if it exists
+        final existingRows = await _db.query(
           table.tableName,
-          updatedData,
           where: '${primaryKeyField.fieldName} = ?',
           whereArgs: [primaryKeyField.fieldName],
         );
-      } else {
-        // Step 3: Insert the item if it doesn't exist
-        await _db.insert(
-          table.tableName,
-          dataMap,
-          conflictAlgorithm:
-              ConflictAlgorithm.ignore, // Avoids duplicate insertion errors
-        );
+
+        if (existingRows.isNotEmpty) {
+          // Merge the existing row with the new data
+          final existingData = existingRows.first;
+          final updatedData = Map<String, Object?>.from(existingData)
+            ..addAll(dataMap);
+
+          // Step 2: Update the row with the merged data
+          await _db.update(
+            table.tableName,
+            updatedData,
+            where: '${primaryKeyField.fieldName} = ?',
+            whereArgs: [primaryKeyField.fieldName],
+          );
+        } else {
+          // Step 3: Insert the item if it doesn't exist
+          await _db.insert(
+            table.tableName,
+            dataMap,
+            conflictAlgorithm:
+                ConflictAlgorithm.ignore, // Avoids duplicate insertion errors
+          );
+        }
       }
-    }
+    });
 
     logAction('Inserted : $data to Table(${table.tableName})');
   }
@@ -218,7 +220,7 @@ abstract class TunaiDB<T> {
   Future<List<Map<String, dynamic>>> fetchWithTables({
     List<({BaseDBFilter filter, DBTable matchedTable})> filters = const [],
     required List<DBInnerJoinTable> tableRecords,
-    bool debugPrint = false,
+    bool printQuery = false,
     DBFilterJoinType filterJoinType = DBFilterJoinType.and,
   }) async {
     // Validate that at least one table is provided
@@ -282,8 +284,8 @@ abstract class TunaiDB<T> {
       query += whereClause;
     }
     // Debug print the query if needed
-    if (debugPrint) {
-      TunaiDBInitializer.logger.logAction('TunaiDB FetchWithTables :\n$query');
+    if (printQuery) {
+      print('TunaiDB FetchWithTables Query :\n$query\n');
     }
 
     // Execute the query and return results
@@ -339,11 +341,6 @@ abstract class TunaiDB<T> {
               .join(' ${filterJoinType.queryOperator} ');
       // TunaiDBLogger.logAction('where clause : $whereClause');
       query += whereClause;
-    }
-
-    if (debugPrint) {
-      TunaiDBInitializer.logger
-          .logAction('innerJoin fetch ${table.tableName} -> $query');
     }
 
     List<Map<String, dynamic>> results = await _db.rawQuery(query);
@@ -423,7 +420,6 @@ abstract class TunaiDB<T> {
       if (sorter != null) {
         query += ' ORDER BY ${sorter.getSortQuery()}';
       }
-      logAction('fetchByFieldValues query : $query');
       List<Map<String, dynamic>> list = await _db.rawQuery(query);
       final List<T> parsedList = list.map((item) {
         try {
@@ -433,10 +429,6 @@ abstract class TunaiDB<T> {
           rethrow;
         }
       }).toList();
-
-      logAction(
-        'Fetched from db (${table.tableName}) ${parsedList.length} items took : ${DateTime.now().difference(currentTime).inMilliseconds} ms',
-      );
 
       return parsedList;
     } catch (e) {
@@ -488,7 +480,6 @@ abstract class TunaiDB<T> {
           updatedData[primaryKeyField.fieldName],
         ],
       );
-      logAction('Merged Rows : $updatedData');
     } else {
       // Step 3: Insert the item if it doesn't exist
       batch.insert(
@@ -497,8 +488,6 @@ abstract class TunaiDB<T> {
         conflictAlgorithm:
             ConflictAlgorithm.ignore, // Avoids duplicate insertion errors
       );
-
-      logAction('Insert Rows : $dataMap');
     }
   }
 
