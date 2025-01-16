@@ -39,42 +39,65 @@ abstract class TunaiDB<T> {
     bool isSupportUpsert = await _isSqliteVersionSupportUpsert();
     log('Inserting list ${list.length}, isSupportUpsert: $isSupportUpsert, primaryKeyField: ${primaryKeyField.fieldName}');
 
-    for (var i = 0; i < list.length; i += batchSize) {
-      final end = (i + batchSize < list.length) ? i + batchSize : list.length;
-      final chunk = list.sublist(i, end);
+    // Retry logic
+    int maxRetries = 3;
+    int retryCount = 0;
+    Duration retryDelay = const Duration(milliseconds: 200);
 
-      await _db.transaction((txn) async {
-        final batch = txn.batch();
-        for (var item in chunk) {
-          late final Map<String, Object?> dataMap;
-          try {
-            dataMap = toMap?.call(item) ?? dbTableDataConverter.toMap(item);
-          } catch (e) {
-            logError('Failed to convert data to map: $e\n$item');
-            continue;
-          }
+    while (retryCount < maxRetries) {
+      try {
+        await _db.transaction((txn) async {
+          for (var i = 0; i < list.length; i += batchSize) {
+            final end =
+                (i + batchSize < list.length) ? i + batchSize : list.length;
+            final chunk = list.sublist(i, end);
 
-          if (isSupportUpsert) {
-            String query = _getUpsertRawQuery(
-              dataMap: dataMap,
-              primaryFieldName: primaryKeyField.fieldName,
-            );
-            log(query);
-            batch.execute(query);
-          } else {
-            await _manualUpsert(
-              txn: txn,
-              primaryKeyField: primaryKeyField,
-              dataMap: dataMap,
-              batch: batch,
-            );
+            final batch = txn.batch();
+            for (var item in chunk) {
+              late final Map<String, Object?> dataMap;
+              try {
+                dataMap = toMap?.call(item) ?? dbTableDataConverter.toMap(item);
+              } catch (e) {
+                logError('Failed to convert data to map: $e\n$item');
+                continue;
+              }
+
+              if (isSupportUpsert) {
+                String query = _getUpsertRawQuery(
+                  dataMap: dataMap,
+                  primaryFieldName: primaryKeyField.fieldName,
+                );
+                batch.execute(query);
+              } else {
+                await _manualUpsert(
+                  txn: txn,
+                  primaryKeyField: primaryKeyField,
+                  dataMap: dataMap,
+                  batch: batch,
+                );
+              }
+            }
+
+            await batch.commit();
+            log('Processed batch ${i + 1} to $end');
           }
+        });
+
+        // If successful, break the retry loop
+        break;
+      } catch (e) {
+        retryCount++;
+        if (e.toString().contains('database is locked') &&
+            retryCount < maxRetries) {
+          log('Database locked, retrying in ${retryDelay.inMilliseconds}ms (attempt $retryCount/$maxRetries)');
+          await Future.delayed(retryDelay);
+          // Increase delay for next retry
+          retryDelay *= 2;
+        } else {
+          // If it's not a lock error or we're out of retries, rethrow
+          rethrow;
         }
-
-        await batch.commit();
-      });
-
-      log('Processed batch ${i + 1} to $end');
+      }
     }
 
     log('Inserted ${list.length} items to Table(${table.tableName}) took: ${DateTime.now().difference(currentTime).inMilliseconds} ms');
