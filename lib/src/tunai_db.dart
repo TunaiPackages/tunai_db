@@ -92,7 +92,7 @@ abstract class TunaiDB<T> {
     logAction(
         'Inserting jsons ${list.length}, isSupportUpsert : ${isSupportUpsert}, primaryKeyField : ${primaryKeyField.fieldName}');
 
-    TunaiDBTrxnQueue().add(() async {
+    await TunaiDBTrxnQueue().add(() async {
       await _db.transaction((txn) async {
         final batch = txn.batch();
         for (var item in list) {
@@ -131,7 +131,7 @@ abstract class TunaiDB<T> {
     bool isSupportUpsert = await _isSqliteVersionSupportUpsert();
     final dataMap = toMap?.call(data) ?? dbTableDataConverter.toMap(data);
 
-    TunaiDBTrxnQueue().add(() async {
+    await TunaiDBTrxnQueue().add(() async {
       if (isSupportUpsert) {
         await _db.rawQuery(_getUpsertRawQuery(
           dataMap: dataMap,
