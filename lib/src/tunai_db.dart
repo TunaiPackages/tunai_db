@@ -195,15 +195,23 @@ abstract class TunaiDB<T> {
 
   Future<void> delete(List<BaseDBFilter> filters) async {
     logAction('Deleting db data match($filters) in Table(${table.tableName})');
-    await _db.delete(
-      table.tableName,
-      where: filters.map((e) => e.getQuery()).join(' AND '),
-    );
+    await TunaiDBTrxnQueue().add(() async {
+      await _db.transaction((txn) async {
+        await txn.delete(
+          table.tableName,
+          where: filters.map((e) => e.getQuery()).join(' AND '),
+        );
+      });
+    });
   }
 
   Future<void> deleteAll() async {
     logAction('Deleting all data in Table(${table.tableName})');
-    await _db.delete(table.tableName);
+    await TunaiDBTrxnQueue().add(() async {
+      await _db.transaction((txn) async {
+        await txn.delete(table.tableName);
+      });
+    });
   }
 
   Future<void> update({
@@ -211,11 +219,15 @@ abstract class TunaiDB<T> {
     required List<DBFilter> filters,
   }) async {
     logAction('Update db data match($filters) in Table(${table.tableName})');
-    await _db.update(
-      table.tableName,
-      dbTableDataConverter.toMap(newData),
-      where: filters.map((e) => e.getQuery()).join(' AND '),
-    );
+    await TunaiDBTrxnQueue().add(() async {
+      await _db.transaction((txn) async {
+        await txn.update(
+          table.tableName,
+          dbTableDataConverter.toMap(newData),
+          where: filters.map((e) => e.getQuery()).join(' AND '),
+        );
+      });
+    });
   }
 
   Future<List<Map<String, dynamic>>> fetchWithTables({
@@ -442,7 +454,6 @@ abstract class TunaiDB<T> {
       List<Map<String, dynamic>> content =
           await _db.rawQuery('SELECT SUM($fieldName) FROM ${table.tableName}');
       double sum = content.first.values.first as double;
-
       return sum;
     } catch (e) {
       rethrow;
