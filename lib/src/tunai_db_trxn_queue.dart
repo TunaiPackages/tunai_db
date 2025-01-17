@@ -2,9 +2,11 @@ import 'dart:async';
 import 'dart:collection';
 
 import 'package:sqflite/sqflite.dart';
+import 'package:synchronized/synchronized.dart';
 import 'package:tunai_db/tunai_db.dart';
 
 class TunaiDBTrxnQueue {
+  final _mutex = Lock();
   static final TunaiDBTrxnQueue _instance = TunaiDBTrxnQueue._internal();
   factory TunaiDBTrxnQueue() => _instance;
   TunaiDBTrxnQueue._internal();
@@ -47,32 +49,37 @@ class TunaiDBTrxnQueue {
     return completer.future.timeout(
       timeout,
       onTimeout: () {
+        _writeQueue.removeFirst();
         throw TimeoutException('Database Operation timed out');
       },
     );
   }
 
   Future<void> _processQueue() async {
-    if (_processing) return;
-    _processing = true;
+    await _mutex.synchronized(() async {
+      if (_processing) return;
+      _processing = true;
 
-    try {
-      while (_writeQueue.isNotEmpty) {
-        final item = _writeQueue.first;
-        _currentWrite = item.operation();
-        if (item.operationName != null) {
-          logAction('TunaiDBQueue Running : ${item.operationName}');
+      try {
+        while (_writeQueue.isNotEmpty) {
+          final item = _writeQueue.first;
+          _currentWrite = item.operation();
+          if (item.operationName != null) {
+            logAction('TunaiDBQueue Running : ${item.operationName}');
+          }
+          try {
+            await _currentWrite;
+          } catch (e) {
+            logAction('TunaiDBQueue Error : ${item.operationName}');
+          } finally {
+            _writeQueue.removeFirst();
+          }
         }
-        try {
-          await _currentWrite;
-        } finally {
-          _writeQueue.removeFirst();
-        }
+      } finally {
+        _currentWrite = null;
+        _processing = false;
       }
-    } finally {
-      _currentWrite = null;
-      _processing = false;
-    }
+    });
   }
 
   /// Clears all pending operations in the queue
