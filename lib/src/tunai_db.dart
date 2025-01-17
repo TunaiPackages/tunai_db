@@ -36,6 +36,7 @@ abstract class TunaiDB<T> {
     logAction(
         'Inserting list ${list.length}, isSupportUpsert: $isSupportUpsert, primaryKeyField: ${primaryKeyField.fieldName}');
     return TunaiDBTrxnQueue().add(
+      operationName: '${table.tableName} InsertList',
       operation: () async {
         await _db.transaction((trxn) async {
           try {
@@ -93,32 +94,35 @@ abstract class TunaiDB<T> {
     logAction(
         'Inserting jsons ${list.length}, isSupportUpsert : ${isSupportUpsert}, primaryKeyField : ${primaryKeyField.fieldName}');
 
-    await TunaiDBTrxnQueue().add(operation: () async {
-      await _db.transaction(
-        (txn) async {
-          final batch = txn.batch();
-          for (var item in list) {
-            if (isSupportUpsert) {
-              String query = _getUpsertRawQuery(
-                dataMap: item,
-                primaryFieldName: primaryKeyField.fieldName,
-              );
+    await TunaiDBTrxnQueue().add(
+      operationName: '${table.tableName} InsertJsons',
+      operation: () async {
+        await _db.transaction(
+          (txn) async {
+            final batch = txn.batch();
+            for (var item in list) {
+              if (isSupportUpsert) {
+                String query = _getUpsertRawQuery(
+                  dataMap: item,
+                  primaryFieldName: primaryKeyField.fieldName,
+                );
 
-              batch.execute(query);
-            } else {
-              await _manualUpsert(
-                executor: txn,
-                primaryKeyField: primaryKeyField,
-                dataMap: item,
-                batch: batch,
-              );
+                batch.execute(query);
+              } else {
+                await _manualUpsert(
+                  executor: txn,
+                  primaryKeyField: primaryKeyField,
+                  dataMap: item,
+                  batch: batch,
+                );
+              }
             }
-          }
 
-          await batch.commit();
-        },
-      );
-    });
+            await batch.commit();
+          },
+        );
+      },
+    );
 
     logAction(
         'Inserted ${list.length} items to Table(${table.tableName}) took : ${DateTime.now().difference(currentTime).inMilliseconds} ms');
@@ -135,6 +139,7 @@ abstract class TunaiDB<T> {
     final dataMap = toMap?.call(data) ?? dbTableDataConverter.toMap(data);
 
     await TunaiDBTrxnQueue().add(
+      operationName: '${table.tableName} Insert',
       operation: () async {
         if (isSupportUpsert) {
           await _db.rawQuery(
@@ -201,6 +206,7 @@ abstract class TunaiDB<T> {
   Future<void> delete(List<BaseDBFilter> filters) async {
     logAction('Deleting db data match($filters) in Table(${table.tableName})');
     await TunaiDBTrxnQueue().add(
+      operationName: '${table.tableName} Delete',
       operation: () async {
         await _db.delete(
           table.tableName,
@@ -225,6 +231,7 @@ abstract class TunaiDB<T> {
   }) async {
     logAction('Update db data match($filters) in Table(${table.tableName})');
     await TunaiDBTrxnQueue().add(
+      operationName: '${table.tableName} Update',
       operation: () async {
         await _db.update(
           table.tableName,

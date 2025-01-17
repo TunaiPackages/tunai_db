@@ -11,6 +11,10 @@ class TunaiDBTrxnQueue {
 
   Database get _db => TunaiDBInitializer().database;
 
+  void logAction(String message) {
+    TunaiDBInitializer.logger.logAction(message);
+  }
+
   final Queue<_QueueItem> _writeQueue = Queue<_QueueItem>();
   Future? _currentWrite;
   bool _processing = false;
@@ -18,12 +22,14 @@ class TunaiDBTrxnQueue {
   /// Adds an operation to the queue and returns a Future that completes
   /// when the operation is done
   Future<T> add<T>({
+    String? operationName,
     required Future<T> Function() operation,
     Duration timeout = const Duration(seconds: 30),
   }) async {
     final completer = Completer<T>();
 
     _writeQueue.add(_QueueItem(
+      operationName: operationName,
       operation: () async {
         try {
           final result = await operation();
@@ -54,7 +60,9 @@ class TunaiDBTrxnQueue {
       while (_writeQueue.isNotEmpty) {
         final item = _writeQueue.first;
         _currentWrite = item.operation();
-
+        if (item.operationName != null) {
+          logAction('TunaiDBQueue Running : ${item.operationName}');
+        }
         try {
           await _currentWrite;
         } finally {
@@ -80,7 +88,8 @@ class TunaiDBTrxnQueue {
 }
 
 class _QueueItem {
+  final String? operationName;
   final Future Function() operation;
 
-  _QueueItem({required this.operation});
+  _QueueItem({required this.operation, this.operationName});
 }
