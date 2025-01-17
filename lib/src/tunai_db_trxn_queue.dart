@@ -36,6 +36,7 @@ class TunaiDBTrxnQueue {
               completer.complete(result);
               return result;
             });
+            _currentTransaction = null;
           } else if (requiredTransaction && _currentTransaction != null) {
             final result = await operation(_currentTransaction!);
             completer.complete(result);

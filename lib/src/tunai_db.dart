@@ -201,6 +201,7 @@ abstract class TunaiDB<T> {
   Future<void> delete(List<BaseDBFilter> filters) async {
     logAction('Deleting db data match($filters) in Table(${table.tableName})');
     await TunaiDBTrxnQueue().add(
+      requiredTransaction: true,
       operation: (txn) async {
         await txn.delete(
           table.tableName,
@@ -213,6 +214,7 @@ abstract class TunaiDB<T> {
   Future<void> deleteAll() async {
     logAction('Deleting all data in Table(${table.tableName})');
     await TunaiDBTrxnQueue().add(
+      requiredTransaction: true,
       operation: (txn) async {
         await _db.delete(table.tableName);
       },
@@ -225,6 +227,7 @@ abstract class TunaiDB<T> {
   }) async {
     logAction('Update db data match($filters) in Table(${table.tableName})');
     await TunaiDBTrxnQueue().add(
+      requiredTransaction: true,
       operation: (txn) async {
         await txn.update(
           table.tableName,
