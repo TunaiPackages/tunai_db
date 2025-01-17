@@ -149,34 +149,36 @@ abstract class TunaiDB<T> {
             ),
           );
         } else {
-          final existingRows = await _db.query(
-            table.tableName,
-            where: '${primaryKeyField.fieldName} = ?',
-            whereArgs: [
-              dataMap[primaryKeyField.fieldName]
-            ], // Fix: Use the actual primary key value
-          );
-
-          if (existingRows.isNotEmpty) {
-            final existingData = existingRows.first;
-            final updatedData = Map<String, Object?>.from(existingData)
-              ..addAll(dataMap);
-
-            await _db.update(
+          await _db.transaction((txn) async {
+            final existingRows = await txn.query(
               table.tableName,
-              updatedData,
               where: '${primaryKeyField.fieldName} = ?',
               whereArgs: [
                 dataMap[primaryKeyField.fieldName]
               ], // Fix: Use the actual primary key value
             );
-          } else {
-            await _db.insert(
-              table.tableName,
-              dataMap,
-              conflictAlgorithm: ConflictAlgorithm.ignore,
-            );
-          }
+
+            if (existingRows.isNotEmpty) {
+              final existingData = existingRows.first;
+              final updatedData = Map<String, Object?>.from(existingData)
+                ..addAll(dataMap);
+
+              await txn.update(
+                table.tableName,
+                updatedData,
+                where: '${primaryKeyField.fieldName} = ?',
+                whereArgs: [
+                  dataMap[primaryKeyField.fieldName]
+                ], // Fix: Use the actual primary key value
+              );
+            } else {
+              await txn.insert(
+                table.tableName,
+                dataMap,
+                conflictAlgorithm: ConflictAlgorithm.ignore,
+              );
+            }
+          });
         }
       },
     );
