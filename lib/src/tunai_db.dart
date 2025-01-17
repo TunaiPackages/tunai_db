@@ -142,7 +142,7 @@ abstract class TunaiDB<T> {
       operationName: '${table.tableName} Insert',
       operation: () async {
         if (isSupportUpsert) {
-          await _db.rawQuery(
+          await _db.rawInsert(
             _getUpsertRawQuery(
               dataMap: dataMap,
               primaryFieldName: primaryKeyField.fieldName,
