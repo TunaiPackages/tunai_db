@@ -25,7 +25,7 @@ class TunaiDBTrxnQueue {
   /// when the operation is done
   Future<T> add<T>({
     String? operationName,
-    required Future<T> Function() operation,
+    required Future<T> Function(Transaction txn) operation,
     Duration timeout = const Duration(seconds: 30),
   }) async {
     final completer = Completer<T>();
@@ -34,7 +34,9 @@ class TunaiDBTrxnQueue {
       operationName: operationName,
       operation: () async {
         try {
-          final result = await operation();
+          final result = await _db.transaction((txn) async {
+            return await operation(txn);
+          });
           completer.complete(result);
           return result;
         } catch (e) {
@@ -50,7 +52,7 @@ class TunaiDBTrxnQueue {
       timeout,
       onTimeout: () {
         _writeQueue.removeFirst();
-        throw TimeoutException('Database Operation timed out');
+        throw TimeoutException('Database Operation timed out: $operationName');
       },
     );
   }
