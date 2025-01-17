@@ -16,6 +16,14 @@ abstract class TunaiDB<T> {
   Database get _db => TunaiDBInitializer().database;
   DBDataConverter<T> get dbTableDataConverter;
 
+  void logFetch(String message) {
+    TunaiDBInitializer.logger.logFetch('${table.tableName} -> $message');
+  }
+
+  void logRaw(String message) {
+    TunaiDBInitializer.logger.logRaw('${table.tableName} -> $message');
+  }
+
   void logAction(String message) {
     TunaiDBInitializer.logger.logAction('${table.tableName} -> $message');
   }
@@ -246,7 +254,7 @@ abstract class TunaiDB<T> {
       throw ArgumentError('At least one table must be provided.');
     }
 
-    logAction(
+    logFetch(
         'Fetching with tables : ${tableRecords.map((e) => e.table.tableName).join(', ')}');
 
     String query = 'SELECT ';
@@ -312,6 +320,7 @@ abstract class TunaiDB<T> {
     // Execute the query and return results
     List<Map<String, dynamic>> results = await _db.rawQuery(query);
 
+    logFetch('Fetched ${results.length} items from Table(${table.tableName})');
     return results;
   }
 
@@ -321,6 +330,7 @@ abstract class TunaiDB<T> {
     bool debugPrint = false,
     DBFilterJoinType filterJoinType = DBFilterJoinType.and,
   }) async {
+    logFetch('Fetching with inner join');
     String query = 'SELECT ';
 
     for (var field in table.fields) {
@@ -366,6 +376,8 @@ abstract class TunaiDB<T> {
 
     List<Map<String, dynamic>> results = await _db.rawQuery(query);
 
+    logFetch('Fetched ${results.length} items from Table(${table.tableName})');
+
     return results;
   }
 
@@ -377,6 +389,7 @@ abstract class TunaiDB<T> {
     int? limit,
     DBFilterJoinType filterJoinType = DBFilterJoinType.and,
   }) async {
+    logFetch('Fetching from Table(${table.tableName})');
     final currentTime = DateTime.now();
     List<Map<String, dynamic>> list = [];
 
@@ -409,7 +422,7 @@ abstract class TunaiDB<T> {
         }
       }).toList();
 
-      logAction(
+      logFetch(
         'Fetched from db (${table.tableName}) ${parsedList.length} items took : ${DateTime.now().difference(currentTime).inMilliseconds} ms',
       );
 
@@ -428,6 +441,7 @@ abstract class TunaiDB<T> {
     List<DBFilter>? filters,
     DBFilterJoinType filterJoinType = DBFilterJoinType.and,
   }) async {
+    logFetch('Fetching by field values');
     try {
       final currentTime = DateTime.now();
       String query =
@@ -451,6 +465,9 @@ abstract class TunaiDB<T> {
         }
       }).toList();
 
+      logFetch(
+          'Fetched ${parsedList.length} items from Table(${table.tableName})');
+
       return parsedList;
     } catch (e) {
       rethrow;
@@ -458,10 +475,14 @@ abstract class TunaiDB<T> {
   }
 
   Future<double> getSum(String fieldName) async {
+    logFetch('Getting sum of field $fieldName from Table(${table.tableName})');
     try {
       List<Map<String, dynamic>> content =
           await _db.rawQuery('SELECT SUM($fieldName) FROM ${table.tableName}');
       double sum = content.first.values.first as double;
+
+      logFetch(
+          'Sum of field $fieldName from Table(${table.tableName}) is $sum');
 
       return sum;
     } catch (e) {
@@ -470,6 +491,7 @@ abstract class TunaiDB<T> {
   }
 
   Future<List<Map<String, Object?>>> rawQuery(String query) async {
+    logRaw('Raw query: $query');
     return await _db.rawQuery(query);
   }
 
