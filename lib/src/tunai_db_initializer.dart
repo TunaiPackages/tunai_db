@@ -126,8 +126,8 @@ class TunaiDBInitializer {
           options: OpenDatabaseOptions(
             version: 1,
             onCreate: _onCreate,
-            onConfigure: (database) {
-              database.execute('PRAGMA journal_mode=WAL;');
+            onConfigure: (database) async {
+              await database.execute('PRAGMA journal_mode=WAL;');
             },
           ),
         );
@@ -136,14 +136,16 @@ class TunaiDBInitializer {
           path,
           version: 1,
           onCreate: _onCreate,
-          onConfigure: (database) {
-            database.execute('PRAGMA journal_mode=WAL;');
+          onConfigure: (database) async {
+            await database.execute('PRAGMA journal_mode=WAL;');
           },
         );
       }
 
+      final result = await database.rawQuery('SELECT sqlite_version();');
+      final sqliteVersion = result.first.values.first;
       _logger.logInit(
-          '* TunaiDB successfully open database ($dbName) : $_database');
+          '* TunaiDB successfully open database ($dbName) version : $sqliteVersion\npath: $_database\n');
     } catch (e) {
       _logger.logInit('* TunaiDB failed to open database : $e');
       rethrow;
