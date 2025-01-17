@@ -30,15 +30,14 @@ abstract class TunaiDB<T> {
     List<DBFilter> filters = const [],
     int batchSize = 1000,
   }) async {
+    final currentTime = DateTime.now();
+    final primaryKeyField = table.primaryKeyField;
+    bool isSupportUpsert = await _isSqliteVersionSupportUpsert();
+    logAction(
+        'Inserting list ${list.length}, isSupportUpsert: $isSupportUpsert, primaryKeyField: ${primaryKeyField.fieldName}');
     return TunaiDBTrxnQueue().add(
       operation: () async {
-        final currentTime = DateTime.now();
         await _db.transaction((trxn) async {
-          final primaryKeyField = table.primaryKeyField;
-          bool isSupportUpsert = await _isSqliteVersionSupportUpsert();
-          logAction(
-              'Inserting list ${list.length}, isSupportUpsert: $isSupportUpsert, primaryKeyField: ${primaryKeyField.fieldName}');
-
           try {
             for (var i = 0; i < list.length; i += batchSize) {
               final end =
