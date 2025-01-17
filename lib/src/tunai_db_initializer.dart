@@ -136,6 +136,9 @@ class TunaiDBInitializer {
         );
       }
 
+      await _database?.execute('PRAGMA journal_mode=WAL;');
+      await _database?.execute('PRAGMA synchronous=NORMAL;');
+
       _logger.logInit(
           '* TunaiDB successfully open database ($dbName) : $_database');
     } catch (e) {
