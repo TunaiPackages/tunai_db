@@ -126,9 +126,7 @@ class TunaiDBInitializer {
           options: OpenDatabaseOptions(
             version: 1,
             onCreate: _onCreate,
-            onConfigure: (database) async {
-              await database.execute('PRAGMA journal_mode=WAL;');
-            },
+            onConfigure: _onConfigure,
           ),
         );
       } else {
@@ -136,9 +134,7 @@ class TunaiDBInitializer {
           path,
           version: 1,
           onCreate: _onCreate,
-          onConfigure: (database) async {
-            await database.execute('PRAGMA journal_mode=WAL;');
-          },
+          onConfigure: _onConfigure,
         );
       }
 
@@ -148,6 +144,45 @@ class TunaiDBInitializer {
           '* TunaiDB successfully open database ($dbName) version : $sqliteVersion\npath: $_database\n');
     } catch (e) {
       _logger.logInit('* TunaiDB failed to open database : $e');
+      rethrow;
+    }
+  }
+
+  Future<void> _onConfigure(Database database) async {
+    try {
+      if (Platform.isIOS || Platform.isMacOS) {
+        // On iOS/macOS, we need to handle the "not an error" message
+        try {
+          await database.execute('PRAGMA journal_mode=WAL;');
+        } catch (e) {
+          if (!e.toString().contains('not an error')) {
+            rethrow;
+          }
+        }
+      } else {
+        await database.execute('PRAGMA journal_mode=WAL;');
+      }
+
+      // Additional PRAGMA settings
+      try {
+        await database.execute('PRAGMA synchronous=NORMAL;');
+        await database.execute('PRAGMA temp_store=MEMORY;');
+        await database.execute('PRAGMA cache_size=2000;');
+      } catch (e) {
+        _logger.logInit('Warning: Failed to set some PRAGMA values: $e');
+      }
+
+      // Verify WAL mode
+      final result = await database.rawQuery('PRAGMA journal_mode;');
+      final journalMode = result.first.values.first.toString().toUpperCase();
+      if (journalMode != 'WAL') {
+        _logger.logInit(
+            'Warning: WAL mode not enabled. Current mode: $journalMode');
+      } else {
+        _logger.logInit('Successfully enabled WAL mode');
+      }
+    } catch (e) {
+      _logger.logInit('Error configuring database: $e');
       rethrow;
     }
   }
