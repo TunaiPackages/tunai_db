@@ -30,15 +30,16 @@ abstract class TunaiDB<T> {
     List<DBFilter> filters = const [],
     int batchSize = 1000,
   }) async {
-    return TunaiDBTrxnQueue().add(() async {
-      final currentTime = DateTime.now();
-      final primaryKeyField = table.primaryKeyField;
-      bool isSupportUpsert = await _isSqliteVersionSupportUpsert();
-      logAction(
-          'Inserting list ${list.length}, isSupportUpsert: $isSupportUpsert, primaryKeyField: ${primaryKeyField.fieldName}');
+    return TunaiDBTrxnQueue().add(
+      requiredTransaction: true,
+      operation: (txn) async {
+        final currentTime = DateTime.now();
+        final primaryKeyField = table.primaryKeyField;
+        bool isSupportUpsert = await _isSqliteVersionSupportUpsert();
+        logAction(
+            'Inserting list ${list.length}, isSupportUpsert: $isSupportUpsert, primaryKeyField: ${primaryKeyField.fieldName}');
 
-      try {
-        await _db.transaction((txn) async {
+        try {
           for (var i = 0; i < list.length; i += batchSize) {
             final end =
                 (i + batchSize < list.length) ? i + batchSize : list.length;
@@ -63,7 +64,7 @@ abstract class TunaiDB<T> {
                 batch.execute(query);
               } else {
                 await _manualUpsert(
-                  txn: txn,
+                  executor: txn,
                   primaryKeyField: primaryKeyField,
                   dataMap: dataMap,
                   batch: batch,
@@ -73,15 +74,15 @@ abstract class TunaiDB<T> {
 
             await batch.commit();
           }
-        });
-      } catch (e) {
-        logError('Failed to insert list: $e');
-        rethrow;
-      }
+        } catch (e) {
+          logError('Failed to insert list: $e');
+          rethrow;
+        }
 
-      logAction(
-          'Inserted ${list.length} items to Table(${table.tableName}) took: ${DateTime.now().difference(currentTime).inMilliseconds} ms');
-    });
+        logAction(
+            'Inserted ${list.length} items to Table(${table.tableName}) took: ${DateTime.now().difference(currentTime).inMilliseconds} ms');
+      },
+    );
   }
 
   Future<void> insertJsons(List<Map<String, dynamic>> list) async {
@@ -92,8 +93,9 @@ abstract class TunaiDB<T> {
     logAction(
         'Inserting jsons ${list.length}, isSupportUpsert : ${isSupportUpsert}, primaryKeyField : ${primaryKeyField.fieldName}');
 
-    await TunaiDBTrxnQueue().add(() async {
-      await _db.transaction((txn) async {
+    await TunaiDBTrxnQueue().add(
+      requiredTransaction: true,
+      operation: (txn) async {
         final batch = txn.batch();
         for (var item in list) {
           if (isSupportUpsert) {
@@ -105,7 +107,7 @@ abstract class TunaiDB<T> {
             batch.execute(query);
           } else {
             await _manualUpsert(
-              txn: txn,
+              executor: txn,
               primaryKeyField: primaryKeyField,
               dataMap: item,
               batch: batch,
@@ -114,8 +116,8 @@ abstract class TunaiDB<T> {
         }
 
         await batch.commit();
-      });
-    });
+      },
+    );
 
     logAction(
         'Inserted ${list.length} items to Table(${table.tableName}) took : ${DateTime.now().difference(currentTime).inMilliseconds} ms');
@@ -131,36 +133,39 @@ abstract class TunaiDB<T> {
     bool isSupportUpsert = await _isSqliteVersionSupportUpsert();
     final dataMap = toMap?.call(data) ?? dbTableDataConverter.toMap(data);
 
-    await TunaiDBTrxnQueue().add(() async {
-      await _db.transaction((txn) async {
+    await TunaiDBTrxnQueue().add(
+      requiredTransaction: true,
+      operation: (txn) async {
         if (isSupportUpsert) {
-          await txn.rawQuery(_getUpsertRawQuery(
-            dataMap: dataMap,
-            primaryFieldName: primaryKeyField.fieldName,
-          ));
+          await txn.rawQuery(
+            _getUpsertRawQuery(
+              dataMap: dataMap,
+              primaryFieldName: primaryKeyField.fieldName,
+            ),
+          );
         } else {
-          // Step 1: Fetch the existing row if it exists
           final existingRows = await txn.query(
             table.tableName,
             where: '${primaryKeyField.fieldName} = ?',
-            whereArgs: [primaryKeyField.fieldName],
+            whereArgs: [
+              dataMap[primaryKeyField.fieldName]
+            ], // Fix: Use the actual primary key value
           );
 
           if (existingRows.isNotEmpty) {
-            // Merge the existing row with the new data
             final existingData = existingRows.first;
             final updatedData = Map<String, Object?>.from(existingData)
               ..addAll(dataMap);
 
-            // Step 2: Update the row with the merged data
             await txn.update(
               table.tableName,
               updatedData,
               where: '${primaryKeyField.fieldName} = ?',
-              whereArgs: [primaryKeyField.fieldName],
+              whereArgs: [
+                dataMap[primaryKeyField.fieldName]
+              ], // Fix: Use the actual primary key value
             );
           } else {
-            // Step 3: Insert the item if it doesn't exist
             await txn.insert(
               table.tableName,
               dataMap,
@@ -168,8 +173,8 @@ abstract class TunaiDB<T> {
             );
           }
         }
-      });
-    });
+      },
+    );
 
     logAction('Inserted : $data to Table(${table.tableName})');
   }
@@ -195,23 +200,23 @@ abstract class TunaiDB<T> {
 
   Future<void> delete(List<BaseDBFilter> filters) async {
     logAction('Deleting db data match($filters) in Table(${table.tableName})');
-    await TunaiDBTrxnQueue().add(() async {
-      await _db.transaction((txn) async {
+    await TunaiDBTrxnQueue().add(
+      operation: (txn) async {
         await txn.delete(
           table.tableName,
           where: filters.map((e) => e.getQuery()).join(' AND '),
         );
-      });
-    });
+      },
+    );
   }
 
   Future<void> deleteAll() async {
     logAction('Deleting all data in Table(${table.tableName})');
-    await TunaiDBTrxnQueue().add(() async {
-      await _db.transaction((txn) async {
-        await txn.delete(table.tableName);
-      });
-    });
+    await TunaiDBTrxnQueue().add(
+      operation: (txn) async {
+        await _db.delete(table.tableName);
+      },
+    );
   }
 
   Future<void> update({
@@ -219,15 +224,15 @@ abstract class TunaiDB<T> {
     required List<DBFilter> filters,
   }) async {
     logAction('Update db data match($filters) in Table(${table.tableName})');
-    await TunaiDBTrxnQueue().add(() async {
-      await _db.transaction((txn) async {
+    await TunaiDBTrxnQueue().add(
+      operation: (txn) async {
         await txn.update(
           table.tableName,
           dbTableDataConverter.toMap(newData),
           where: filters.map((e) => e.getQuery()).join(' AND '),
         );
-      });
-    });
+      },
+    );
   }
 
   Future<List<Map<String, dynamic>>> fetchWithTables({
@@ -240,6 +245,9 @@ abstract class TunaiDB<T> {
     if (tableRecords.isEmpty) {
       throw ArgumentError('At least one table must be provided.');
     }
+
+    logAction(
+        'Fetching with tables : ${tableRecords.map((e) => e.table.tableName).join(', ')}');
 
     String query = 'SELECT ';
 
@@ -466,13 +474,13 @@ abstract class TunaiDB<T> {
   }
 
   Future<void> _manualUpsert({
-    required Transaction txn,
+    required DatabaseExecutor executor,
     required DBField primaryKeyField,
     required Map<String, Object?> dataMap,
     required Batch batch,
   }) async {
     // Step 1: Fetch the existing row if it exists
-    final existingRows = await txn.query(
+    final existingRows = await executor.query(
       table.tableName,
       where: '${primaryKeyField.fieldName} = ?',
       whereArgs: [dataMap[primaryKeyField.fieldName]],
