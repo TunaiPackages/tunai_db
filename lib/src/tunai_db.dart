@@ -71,7 +71,7 @@ abstract class TunaiDB<T> {
               }
             }
 
-            await batch.commit();
+            await batch.commit(noResult: true);
           }
         } catch (e) {
           logError('Failed to insert list: $e');
@@ -113,7 +113,7 @@ abstract class TunaiDB<T> {
           }
         }
 
-        await batch.commit();
+        await batch.commit(noResult: true);
       },
     );
 
