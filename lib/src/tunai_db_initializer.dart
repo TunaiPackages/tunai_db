@@ -126,6 +126,9 @@ class TunaiDBInitializer {
           options: OpenDatabaseOptions(
             version: 1,
             onCreate: _onCreate,
+            onConfigure: (database) {
+              database.execute('PRAGMA journal_mode=WAL;');
+            },
           ),
         );
       } else {
@@ -133,11 +136,11 @@ class TunaiDBInitializer {
           path,
           version: 1,
           onCreate: _onCreate,
+          onConfigure: (database) {
+            database.execute('PRAGMA journal_mode=WAL;');
+          },
         );
       }
-
-      await _database?.execute('PRAGMA journal_mode=WAL;');
-      await _database?.execute('PRAGMA synchronous=NORMAL;');
 
       _logger.logInit(
           '* TunaiDB successfully open database ($dbName) : $_database');
