@@ -160,14 +160,15 @@ class TunaiDBInitializer {
           }
         }
       } else {
-        await database.execute('PRAGMA journal_mode=WAL;');
+        // For Android and other platforms, use rawQuery instead of execute
+        await database.rawQuery('PRAGMA journal_mode=WAL;');
       }
 
-      // Additional PRAGMA settings
+      // Additional PRAGMA settings - use rawQuery for all platforms
       try {
-        await database.execute('PRAGMA synchronous=NORMAL;');
-        await database.execute('PRAGMA temp_store=MEMORY;');
-        await database.execute('PRAGMA cache_size=2000;');
+        await database.rawQuery('PRAGMA synchronous=NORMAL;');
+        await database.rawQuery('PRAGMA temp_store=MEMORY;');
+        await database.rawQuery('PRAGMA cache_size=2000;');
       } catch (e) {
         _logger.logInit('Warning: Failed to set some PRAGMA values: $e');
       }
