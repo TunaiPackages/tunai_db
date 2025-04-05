@@ -38,6 +38,7 @@ abstract class TunaiDB<T> {
     List<DBFilter> filters = const [],
     int batchSize = 1000,
   }) async {
+    if (list.isEmpty) return;
     final currentTime = DateTime.now();
     final primaryKeyField = table.primaryKeyField;
     bool isSupportUpsert = await _isSqliteVersionSupportUpsert();
