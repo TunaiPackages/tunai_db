@@ -91,4 +91,38 @@ final dbInit = TunaiDBInitializer();
 
 DBName and unique_key is to form the filename for database file
 
+3. Fetch data by simple calling
+
+```dart
+final ExampleDB db = ExampleDB();
+
+final List<Example> examples = await db.fetch();
+```
+
+With filter
+
+```dart
+final ExampleDB db = ExampleDB();
+
+final List<Example> examples = await db.fetch(
+  filters: [
+      DBFilter(
+        fieldName: 'id',
+        matched: 0,
+      ),
+  ],
+);
+```
+
+4. Insert 
+
+```dart
+ await db.insertList([
+    Example(id: 0, name: 'test'),
+    Example(id: 0, name: 'test'),
+  ]);
+```
+
+It is actually upsert, which will update the data with on conflict
+
 
