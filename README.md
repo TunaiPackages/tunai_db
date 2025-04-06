@@ -11,29 +11,84 @@ and the Flutter guide for
 [developing packages and plugins](https://flutter.dev/developing-packages).
 -->
 
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
+TunaiDB is a type-safe SQLite wrapper for Flutter that simplifies database operations with a clean, intuitive API. It provides robust transaction management, efficient batch operations, and intelligent query capabilities while abstracting away the complexities of raw SQL. The package handles schema migrations, supports complex joins and filters, and automatically optimizes operations based on the underlying SQLite version. Perfect for developers who want the power of SQLite with the convenience of a modern, object-oriented interface.
 
 ## Features
 
-TODO: List what your package can do. Maybe include images, gifs, or videos.
+Core Features
+- Type-safe database operations with generic TunaiDB<T> implementation
+- Automatic data conversion between Dart objects and database records
+- Transaction management with queued operations for data consistency
+- Comprehensive logging for debugging and performance monitoring
+  
+Query Capabilities
+- Flexible filtering with support for complex conditions and join types
+- Table joins with intuitive API for multi-table queries
+- Custom sorting options for result ordering
+- Raw query support for advanced use cases
+  
+Performance Optimizations
+- Batch operations for efficient bulk inserts and updates
+- Intelligent upsert handling with SQLite version detection
+- Chunked processing for large datasets to manage memory usage
+  
 
-## Getting started
+## Getting Started
 
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
-
-## Usage
-
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder.
+1. Create your own database table class which extends TunaiDB 
 
 ```dart
-const like = 'sample';
+class ExampleDB extends TunaiDB<Example> {
+  static final DBTable dbTable = DBTable(tableName: 'example', fields: [
+    DBField(
+      fieldName: 'id',
+      fieldType: DBFieldType.integer,
+      isPrimaryKey: true,
+    ),
+    DBField(
+      fieldName: 'name',
+      fieldType: DBFieldType.text,
+    ),
+  ]);
+
+  @override
+  DBDataConverter<Example> get dbTableDataConverter => ExampleDBDataConverter();
+
+  @override
+  DBTable get table => dbTable;
+}
+
+class ExampleDBDataConverter extends DBDataConverter<Example> {
+  @override
+  Example fromMap(Map<String, Object?> map) {
+    return Example(
+      id: map['id'] as int,
+      name: map['name'] as String,
+    );
+  }
+
+  @override
+  Map<String, Object?> toMap(Example data) {
+    return {
+      'id': data.id,
+      'name': data.name,
+    };
+  }
+}
 ```
 
-## Additional information
+2. Init the database connections in main
 
-TODO: Tell users more about the package: where to find more information, how to
-contribute to the package, how to file issues, what response they can expect
-from the package authors, and more.
+```dart
+final dbInit = TunaiDBInitializer();
+
+  dbInit
+    ..setDBName('your_app_name')
+    ..setTables([ExampleDB.dbTable);
+
+  dbInit.initDatabase(unique_key)
+```
+
+DBName and unique_key is to form the filename for database file
+
+
