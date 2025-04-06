@@ -123,6 +123,6 @@ final List<Example> examples = await db.fetch(
   ]);
 ```
 
-It is actually upsert, which will update the data with on conflict
+It is actually upsert, which will update the data on conflict
 
 
