@@ -86,7 +86,7 @@ final dbInit = TunaiDBInitializer();
     ..setDBName('your_app_name')
     ..setTables([ExampleDB.dbTable);
 
-  dbInit.initDatabase(unique_key)
+  await dbInit.initDatabase(unique_key)
 ```
 
 DBName and unique_key is to form the filename for database file
