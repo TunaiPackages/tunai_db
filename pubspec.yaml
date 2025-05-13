@@ -11,9 +11,9 @@ dependencies:
   flutter:
     sdk: flutter
 
-  sqflite: ^2.3.3
-  sqflite_common_ffi: ^2.3.3
-  sqlite3_flutter_libs: ^0.5.24
+  sqflite: ^2.4.2
+  sqflite_common_ffi: ^2.3.5
+  sqlite3_flutter_libs: ^0.5.32
   path_provider: ^2.1.3
   synchronized: ^3.3.0+3
 
