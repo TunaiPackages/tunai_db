@@ -236,13 +236,13 @@ class TunaiDBInitializer {
       List<Map<String, dynamic>> tables = await db
           .rawQuery("SELECT name FROM sqlite_master WHERE type='table'");
 
-      await addMissingTable(
+      await _addMissingTable(
         db: db,
         dbTables: dbTables,
         currentTables: tables,
       );
 
-      await dropExtraTable(
+      await _dropExtraTable(
         db: db,
         dbTables: dbTables,
         currentTables: tables,
@@ -258,62 +258,95 @@ class TunaiDBInitializer {
           continue;
         }
 
-        await updateIndexes(
+        await _updateIndexes(
           db: db,
           table: dbTable,
         );
 
-        // TunaiDBLogger.logInit('* -> Checking columns for table ${table['name']}...');
         List<Map<String, dynamic>> columns =
             await db.rawQuery("PRAGMA table_info('${table['name']}')");
 
-        for (var column in columns) {
-          DBField? dbField = dbTable.fields.firstWhereOrNull(
-            (field) => field.fieldName == column['name'],
-          );
+        await _updateColumns(
+          db: db,
+          table: table,
+          dbTable: dbTable,
+          columns: columns,
+          logger: _logger,
+        );
 
-          if (dbField == null) {
-            TunaiDBInitializer.logger.logInit(
-                '* -> Dropping column ${column['name']} from table ${dbTable.tableName}...');
-            db.execute(
-                "ALTER TABLE ${dbTable.tableName} DROP COLUMN ${column['name']}");
-          } else {
-            bool fieldUpdated =
-                (dbField.isPrimaryKey ? 1 : 0) != column['pk'] ||
-                    dbField.fieldType.query != column['type'];
-            if (fieldUpdated) {
-              TunaiDBInitializer.logger.logInit(
-                  '* -> Updating column ${column['name']} in table ${dbTable.tableName}...');
-              db.execute(
-                  "ALTER TABLE ${dbTable.tableName} RENAME TO ${dbTable.tableName}_old");
-              db.execute(dbTable.createTableQuery);
-              db.execute(
-                  "INSERT INTO ${dbTable.tableName} SELECT * FROM ${dbTable.tableName}_old");
-              db.execute("DROP TABLE ${dbTable.tableName}_old");
-            }
-          }
-        }
-
-        await addMissingColumns(
+        await _addMissingColumns(
           db: db,
           table: dbTable,
           columns: columns,
         );
-
-        // dropExtraColumns(
-        //   db: db,
-        //   table: dbTable,
-        //   columns: columns,
-        // );
       }
     } catch (e) {
-      _logger.logInit('* TunaiDB failed to update tables. $e');
+      _logger.logError('* TunaiDB failed to update tables. $e');
       rethrow;
     }
   }
 }
 
-Future<void> updateIndexes({
+Future<void> _updateColumns({
+  required Database db,
+  required Map<String, dynamic> table,
+  required DBTable dbTable,
+  required List<Map<String, dynamic>> columns,
+  required TunaiDBLogger logger,
+}) async {
+  try {
+    List<Future> futures = [];
+    for (var column in columns) {
+      futures.add(_updateColumn(
+        db: db,
+        dbTable: dbTable,
+        column: column,
+        logger: logger,
+      ));
+    }
+    await Future.wait(futures);
+  } catch (e) {
+    logger.logError('* TunaiDB failed to update columns. $e');
+  }
+}
+
+Future<void> _updateColumn({
+  required Database db,
+  required DBTable dbTable,
+  required Map<String, dynamic> column,
+  required TunaiDBLogger logger,
+}) async {
+  try {
+    DBField? dbField = dbTable.fields.firstWhereOrNull(
+      (field) => field.fieldName == column['name'],
+    );
+
+    if (dbField == null) {
+      TunaiDBInitializer.logger.logInit(
+          '* -> Dropping column ${column['name']} from table ${dbTable.tableName}...');
+      await db.execute(
+          "ALTER TABLE ${dbTable.tableName} DROP COLUMN ${column['name']}");
+    } else {
+      bool fieldUpdated = (dbField.isPrimaryKey ? 1 : 0) != column['pk'] ||
+          dbField.fieldType.query != column['type'];
+      if (fieldUpdated) {
+        TunaiDBInitializer.logger.logInit(
+            '* -> Updating column ${column['name']} in table ${dbTable.tableName}...');
+        await db.execute(
+            "ALTER TABLE ${dbTable.tableName} RENAME TO ${dbTable.tableName}_old");
+        await db.execute(dbTable.createTableQuery);
+        await db.execute(
+            "INSERT INTO ${dbTable.tableName} SELECT * FROM ${dbTable.tableName}_old");
+        await db.execute("DROP TABLE ${dbTable.tableName}_old");
+      }
+    }
+  } catch (e) {
+    logger
+        .logError('* TunaiDB failed to update column : ${column['name']}. $e');
+  }
+}
+
+Future<void> _updateIndexes({
   required Database db,
   required DBTable table,
 }) async {
@@ -356,7 +389,7 @@ ON ${table.tableName} (${indexing.fieldName});
   }
 }
 
-Future<void> addMissingTable({
+Future<void> _addMissingTable({
   required Database db,
   required List<DBTable> dbTables,
   required List<Map<String, dynamic>> currentTables,
@@ -376,7 +409,7 @@ Future<void> addMissingTable({
   }
 }
 
-Future<void> dropExtraTable({
+Future<void> _dropExtraTable({
   required Database db,
   required List<DBTable> dbTables,
   required List<Map<String, dynamic>> currentTables,
@@ -396,7 +429,7 @@ Future<void> dropExtraTable({
   }
 }
 
-Future<void> addMissingColumns({
+Future<void> _addMissingColumns({
   required Database db,
   required DBTable table,
   required List<Map<String, dynamic>> columns,
@@ -408,7 +441,7 @@ Future<void> addMissingColumns({
       .any((element) => element.isPrimaryKey || element.reference != null)) {
     TunaiDBInitializer.logger.logInit(
         '* -> Missing Columns contain primary or foreign key, rebuilding table ${table.tableName}...');
-    await rebuildTable(db: db, table: table, columns: columns);
+    await _rebuildTable(db: db, table: table, columns: columns);
   } else if (missingColumns.isNotEmpty) {
     TunaiDBInitializer.logger.logInit(
         '* -> Adding missing columns to table ${table.tableName}...\n${missingColumns.map((field) => field.fieldQuery).join('\n')}');
@@ -422,7 +455,7 @@ Future<void> addMissingColumns({
   }
 }
 
-Future<void> rebuildTable({
+Future<void> _rebuildTable({
   required Database db,
   required DBTable table,
   required List<Map<String, dynamic>> columns,
@@ -443,7 +476,7 @@ ALTER TABLE ${table.tableName} RENAME TO $oldTableName;
   await db.execute('DROP TABLE $oldTableName');
 }
 
-Future<void> dropExtraColumns({
+Future<void> _dropExtraColumns({
   required Database db,
   required DBTable table,
   required List<Map<String, dynamic>> columns,
@@ -461,7 +494,7 @@ Future<void> dropExtraColumns({
   })) {
     TunaiDBInitializer.logger.logInit(
         '* -> Dropping Columns contain primary or foreign key, rebuilding table ${table.tableName}...');
-    await rebuildTable(db: db, table: table, columns: columns);
+    await _rebuildTable(db: db, table: table, columns: columns);
   } else if (droppingColumns.isNotEmpty) {
     List<Future> listFuture = [];
     for (Map<String, dynamic> column in droppingColumns) {
