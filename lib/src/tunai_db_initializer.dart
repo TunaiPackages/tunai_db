@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'dart:io';
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
@@ -434,24 +435,50 @@ Future<void> _addMissingColumns({
   required DBTable table,
   required List<Map<String, dynamic>> columns,
 }) async {
-  List<DBField> missingColumns = table.fields.where((field) {
-    return !columns.any((column) => column['name'] == field.fieldName);
-  }).toList();
-  if (missingColumns
-      .any((element) => element.isPrimaryKey || element.reference != null)) {
-    TunaiDBInitializer.logger.logInit(
-        '* -> Missing Columns contain primary or foreign key, rebuilding table ${table.tableName}...');
-    await _rebuildTable(db: db, table: table, columns: columns);
-  } else if (missingColumns.isNotEmpty) {
-    TunaiDBInitializer.logger.logInit(
-        '* -> Adding missing columns to table ${table.tableName}...\n${missingColumns.map((field) => field.fieldQuery).join('\n')}');
-    List<Future> listFuture = [];
-    for (var field in missingColumns) {
-      listFuture.add(db.execute(
-          'ALTER TABLE ${table.tableName} ADD COLUMN ${field.fieldQuery}'));
+  try {
+    Map<String, int> fieldNameCounts = {};
+    for (var field in table.fields) {
+      fieldNameCounts[field.fieldName] =
+          (fieldNameCounts[field.fieldName] ?? 0) + 1;
+    }
+    List<String> duplicateFields = fieldNameCounts.entries
+        .where((entry) => entry.value > 1)
+        .map((entry) => entry.key)
+        .toList();
+    if (duplicateFields.isNotEmpty) {
+      TunaiDBInitializer.logger.logError(
+          'Duplicate field names found in table ${table.tableName}: ${duplicateFields.join(", ")}');
     }
 
-    await Future.wait(listFuture);
+    List<DBField> missingColumns = table.fields.where((field) {
+      return !columns.any((column) => column['name'] == field.fieldName);
+    }).toList();
+
+    if (missingColumns
+        .any((element) => element.isPrimaryKey || element.reference != null)) {
+      TunaiDBInitializer.logger.logInit(
+          '* -> Missing Columns contain primary or foreign key, rebuilding table ${table.tableName}...');
+      await _rebuildTable(db: db, table: table, columns: columns);
+    } else if (missingColumns.isNotEmpty) {
+      TunaiDBInitializer.logger.logInit(
+          '* -> Adding missing columns to table ${table.tableName}...\n${missingColumns.map((field) => field.fieldQuery).join('\n')}');
+      List<Future> listFuture = [];
+      for (var field in missingColumns) {
+        listFuture.add(db
+            .execute(
+          'ALTER TABLE ${table.tableName} ADD COLUMN ${field.fieldQuery}',
+        )
+            .catchError((e, trace) {
+          TunaiDBInitializer.logger.logError(
+              '* TunaiDB failed to add column ${field.fieldName} to table ${table.tableName}. $e');
+        }));
+      }
+
+      await Future.wait(listFuture);
+    }
+  } catch (e) {
+    TunaiDBInitializer.logger.logError(
+        '* TunaiDB failed to add missing columns to table ${table.tableName}. $e');
   }
 }
 
