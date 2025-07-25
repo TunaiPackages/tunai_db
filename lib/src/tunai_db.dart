@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:tunai_db/src/model/db_filter_join_type.dart';
 import 'package:tunai_db/src/model/db_inner_join_table.dart';
+import 'package:tunai_db/src/model/db_left_join.dart';
 import 'package:tunai_db/src/model/grouped_db_filter.dart';
 import 'package:tunai_db/tunai_db.dart';
 
@@ -393,6 +394,60 @@ abstract class TunaiDB<T> {
     logFetch('Fetched ${results.length} items from Table(${table.tableName})');
 
     return results;
+  }
+
+  Future<List<Map<String, dynamic>>> fetchWithLeftJoins({
+    List<BaseDBFilter> filters = const [],
+    List<GroupedDBFilter> groupedFilters = const [],
+    List<DBLeftJoin> leftJoins = const [],
+    T Function(Map<String, Object?> map)? fromMap,
+    DBSorter? sorter,
+    int? offset,
+    int? limit,
+    DBFilterJoinType filterJoinType = DBFilterJoinType.and,
+    bool printQuery = false,
+  }) async {
+    logFetch('Fetching with left joins from Table(${table.tableName})');
+    final currentTime = DateTime.now();
+
+    // Build query using QueryHelper
+    String query = QueryHelper().buildLeftJoinQuery(
+      mainTable: table,
+      leftJoins: leftJoins,
+      filters: filters,
+      groupedFilters: groupedFilters,
+      filterJoinType: filterJoinType,
+      orderBy: sorter?.getSortQuery(),
+      limit: limit,
+      offset: offset,
+    );
+
+    // Debug print the query if needed
+    if (printQuery) {
+      print('TunaiDB FetchWithLeftJoins Query:\n$query\n');
+    }
+
+    // Execute the query
+    List<Map<String, dynamic>> list = await _db.rawQuery(query);
+
+    try {
+      final List<T> parsedList = list.map((item) {
+        try {
+          return fromMap?.call(item) ?? dbTableDataConverter.fromMap(item);
+        } catch (e) {
+          logError('Failed to parse data from map: $e\n$item');
+          rethrow;
+        }
+      }).toList();
+
+      logFetch(
+        'Fetched with left joins from db (${table.tableName}) ${parsedList.length} items took: ${DateTime.now().difference(currentTime).inMilliseconds} ms',
+      );
+
+      return list;
+    } catch (e) {
+      rethrow;
+    }
   }
 
   Future<List<T>> fetch({
