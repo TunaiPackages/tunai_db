@@ -1,6 +1,8 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:tunai_db/src/model/db_filter_join_type.dart';
 import 'package:tunai_db/src/model/db_inner_join_table.dart';
+import 'package:tunai_db/src/model/grouped_db_filter.dart';
+import 'package:tunai_db/tunai_db.dart';
 
 import 'model/db_field.dart';
 import 'model/db_table.dart';
@@ -8,7 +10,6 @@ import 'model/db_data_converter.dart';
 import 'model/db_filter.dart';
 import 'model/db_sorter.dart';
 import 'tunai_db_initializer.dart';
-import 'tunai_db_logger.dart';
 import 'tunai_db_trxn_queue.dart';
 
 abstract class TunaiDB<T> {
@@ -41,6 +42,10 @@ abstract class TunaiDB<T> {
     if (list.isEmpty) return;
     final currentTime = DateTime.now();
     final primaryKeyField = table.primaryKeyField;
+    if (primaryKeyField.fieldName == 'none') {
+      logError('Primary key field is not set for table ${table.tableName}');
+      return;
+    }
     bool isSupportUpsert = await _isSqliteVersionSupportUpsert();
     logAction(
         'Inserting list ${list.length}, isSupportUpsert: $isSupportUpsert, primaryKeyField: ${primaryKeyField.fieldName}');
@@ -95,6 +100,10 @@ abstract class TunaiDB<T> {
   Future<void> insertJsons(List<Map<String, dynamic>> list) async {
     final currentTime = DateTime.now();
     final primaryKeyField = table.primaryKeyField;
+    if (primaryKeyField.fieldName == 'none') {
+      logError('Primary key field is not set for table ${table.tableName}');
+      return;
+    }
 
     bool isSupportUpsert = await _isSqliteVersionSupportUpsert();
     logAction(
@@ -137,6 +146,10 @@ abstract class TunaiDB<T> {
   }) async {
     logAction('Inserting : $data to Table(${table.tableName})');
     final primaryKeyField = table.primaryKeyField;
+    if (primaryKeyField.fieldName == 'none') {
+      logError('Primary key field is not set for table ${table.tableName}');
+      return;
+    }
     bool isSupportUpsert = await _isSqliteVersionSupportUpsert();
     final dataMap = toMap?.call(data) ?? dbTableDataConverter.toMap(data);
 
@@ -384,6 +397,7 @@ abstract class TunaiDB<T> {
 
   Future<List<T>> fetch({
     List<BaseDBFilter> filters = const [],
+    List<GroupedDBFilter> groupedFilters = const [],
     T Function(Map<String, Object?> map)? fromMap,
     DBSorter? sorter,
     int? offset,
@@ -394,7 +408,7 @@ abstract class TunaiDB<T> {
     final currentTime = DateTime.now();
     List<Map<String, dynamic>> list = [];
 
-    if (filters.isEmpty) {
+    if (filters.isEmpty && groupedFilters.isEmpty) {
       list = await _db.query(
         table.tableName,
         orderBy: sorter?.getSortQuery(),
@@ -404,9 +418,11 @@ abstract class TunaiDB<T> {
     } else {
       list = await _db.query(
         table.tableName,
-        where: filters
-            .map((e) => e.getQuery())
-            .join(' ${filterJoinType.queryOperator} '),
+        where: QueryHelper().getWhereQuery(
+          filters: filters,
+          groupedFilters: groupedFilters,
+          filterJoinType: filterJoinType,
+        ),
         // whereArgs: filter.matchings,
         orderBy: sorter?.getSortQuery(),
         limit: limit,

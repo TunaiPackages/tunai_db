@@ -30,7 +30,7 @@ class TunaiDBLoggerImpl implements TunaiDBLogger {
 
   @override
   void logError(String message) {
-    // debugPrint('TunaiDB: $message');
+    debugPrint('TunaiDBError: $message');
   }
 
   @override

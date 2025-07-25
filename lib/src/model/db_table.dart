@@ -1,11 +1,18 @@
+import 'package:tunai_db/src/model/db_field_type.dart';
+
 import 'db_field.dart';
 
 class DBTable {
   final String tableName;
   final List<DBField> fields;
 
-  DBField get primaryKeyField =>
-      fields.firstWhere((field) => field.isPrimaryKey);
+  DBField get primaryKeyField => fields.firstWhere(
+        (field) => field.isPrimaryKey,
+        orElse: () => const DBField(
+          fieldName: 'none',
+          fieldType: DBFieldType.text,
+        ),
+      );
   List<DBField> get foreignFields =>
       fields.where((field) => field.reference != null).toList();
 
