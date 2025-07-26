@@ -19,6 +19,8 @@ class TunaiDBInitializer {
 
   static TunaiDBLogger _logger = TunaiDBLoggerImpl();
   static TunaiDBLogger get logger => _logger;
+  static bool _isSupportUpsert = false;
+  static bool get isSupportUpsert => _isSupportUpsert;
 
   static void setLogger(TunaiDBLogger logger) {
     _logger = logger;
@@ -68,6 +70,7 @@ class TunaiDBInitializer {
       if (updateDB) {
         await updateTables(_database!, _allTables);
       }
+      _isSupportUpsert = await _isSqliteVersionSupportUpsert(database);
     } catch (e) {
       _logger.logInit('TunaiDB Failed to initialize. $e');
       rethrow;
@@ -539,5 +542,29 @@ Future<void> _dropExtraColumns({
           "ALTER TABLE ${table.tableName} DROP COLUMN ${column['name']}"));
     }
     await Future.wait(listFuture);
+  }
+}
+
+Future<bool> _isSqliteVersionSupportUpsert(Database db) async {
+  try {
+    // Get SQLite version
+    var result = await db.rawQuery('SELECT sqlite_version()');
+    var sqliteVersion = result.first.values.first as String;
+
+    // Split the version number into major, minor, patch
+    var versionParts = sqliteVersion.split('.');
+    var major = int.parse(versionParts[0]);
+    var minor = int.parse(versionParts[1]);
+
+    // If the SQLite version is 3.24.0 or higher, use ON CONFLICT DO UPDATE
+    if (major > 3 || (major == 3 && minor >= 24)) {
+      return true;
+    } else {
+      return false;
+    }
+  } catch (e) {
+    TunaiDBInitializer.logger.logError(
+        '* TunaiDB failed to check if SQLite version supports upsert. $e');
+    return false;
   }
 }

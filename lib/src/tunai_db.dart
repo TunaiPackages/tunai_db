@@ -3,7 +3,7 @@ import 'package:tunai_db/src/model/db_filter_join_type.dart';
 import 'package:tunai_db/src/model/db_inner_join_table.dart';
 import 'package:tunai_db/src/model/db_left_join.dart';
 import 'package:tunai_db/src/model/grouped_db_filter.dart';
-import 'package:tunai_db/tunai_db.dart';
+import 'package:tunai_db/src/utils/query_helper.dart';
 
 import 'model/db_field.dart';
 import 'model/db_table.dart';
@@ -18,22 +18,6 @@ abstract class TunaiDB<T> {
   Database get _db => TunaiDBInitializer().database;
   DBDataConverter<T> get dbTableDataConverter;
 
-  void logFetch(String message) {
-    TunaiDBInitializer.logger.logFetch('${table.tableName} -> $message');
-  }
-
-  void logRaw(String message) {
-    TunaiDBInitializer.logger.logRaw('${table.tableName} -> $message');
-  }
-
-  void logAction(String message) {
-    TunaiDBInitializer.logger.logAction('${table.tableName} -> $message');
-  }
-
-  void logError(String message) {
-    TunaiDBInitializer.logger.logError('${table.tableName} ! $message');
-  }
-
   Future<void> insertList(
     List<T> list, {
     Map<String, Object?> Function(T data)? toMap,
@@ -47,7 +31,7 @@ abstract class TunaiDB<T> {
       logError('Primary key field is not set for table ${table.tableName}');
       return;
     }
-    bool isSupportUpsert = await _isSqliteVersionSupportUpsert();
+    bool isSupportUpsert = TunaiDBInitializer.isSupportUpsert;
     logAction(
         'Inserting list ${list.length}, isSupportUpsert: $isSupportUpsert, primaryKeyField: ${primaryKeyField.fieldName}');
     return TunaiDBTrxnQueue().add(
@@ -59,34 +43,34 @@ abstract class TunaiDB<T> {
                 (i + batchSize < list.length) ? i + batchSize : list.length;
             final chunk = list.sublist(i, end);
 
-            final batch = trxn.batch();
-            for (var item in chunk) {
-              late final Map<String, Object?> dataMap;
-              try {
-                dataMap = toMap?.call(item) ?? dbTableDataConverter.toMap(item);
-              } catch (e) {
-                logError('Failed to convert data to map: $e\n$item');
-                continue;
-              }
+            if (isSupportUpsert) {
+              final batch = trxn.batch();
+              for (var item in chunk) {
+                late final Map<String, Object?> dataMap;
+                try {
+                  dataMap =
+                      toMap?.call(item) ?? dbTableDataConverter.toMap(item);
+                } catch (e) {
+                  logError('Failed to convert data to map: $e\n$item');
+                  continue;
+                }
 
-              if (isSupportUpsert) {
                 String query = _getUpsertRawQuery(
                   dataMap: dataMap,
                   primaryFieldName: primaryKeyField.fieldName,
                 );
 
                 batch.execute(query);
-              } else {
-                await _manualUpsert(
-                  executor: trxn,
-                  primaryKeyField: primaryKeyField,
-                  dataMap: dataMap,
-                  batch: batch,
-                );
               }
+              await batch.commit(noResult: true);
+            } else {
+              await _manualUpsertBatch(
+                executor: trxn,
+                primaryKeyField: primaryKeyField,
+                chunk: chunk,
+                toMap: toMap,
+              );
             }
-
-            await batch.commit(noResult: true);
           }
         } catch (e) {
           logError('Failed to insert list: $e');
@@ -106,33 +90,31 @@ abstract class TunaiDB<T> {
       return;
     }
 
-    bool isSupportUpsert = await _isSqliteVersionSupportUpsert();
+    bool isSupportUpsert = TunaiDBInitializer.isSupportUpsert;
     logAction(
         'Inserting jsons ${list.length}, isSupportUpsert : ${isSupportUpsert}, primaryKeyField : ${primaryKeyField.fieldName}');
 
     await TunaiDBTrxnQueue().add(
       operationName: '${table.tableName} InsertJsons',
       operation: (trxn) async {
-        final batch = trxn.batch();
-        for (var item in list) {
-          if (isSupportUpsert) {
+        if (isSupportUpsert) {
+          final batch = trxn.batch();
+          for (var item in list) {
             String query = _getUpsertRawQuery(
               dataMap: item,
               primaryFieldName: primaryKeyField.fieldName,
             );
 
             batch.execute(query);
-          } else {
-            await _manualUpsert(
-              executor: trxn,
-              primaryKeyField: primaryKeyField,
-              dataMap: item,
-              batch: batch,
-            );
           }
+          await batch.commit(noResult: true);
+        } else {
+          await _manualUpsertJsonsBatch(
+            executor: trxn,
+            primaryKeyField: primaryKeyField,
+            jsonList: list,
+          );
         }
-
-        await batch.commit(noResult: true);
       },
     );
 
@@ -151,7 +133,7 @@ abstract class TunaiDB<T> {
       logError('Primary key field is not set for table ${table.tableName}');
       return;
     }
-    bool isSupportUpsert = await _isSqliteVersionSupportUpsert();
+    bool isSupportUpsert = TunaiDBInitializer.isSupportUpsert;
     final dataMap = toMap?.call(data) ?? dbTableDataConverter.toMap(data);
 
     await TunaiDBTrxnQueue().add(
@@ -532,13 +514,13 @@ abstract class TunaiDB<T> {
         try {
           return fromMap?.call(item) ?? dbTableDataConverter.fromMap(item);
         } catch (e) {
-          logError('Failed to parse data from map : $e\n$item');
+          logError('Failed to parse data from map : $e\n$item ');
           rethrow;
         }
       }).toList();
 
       logFetch(
-          'Fetched ${parsedList.length} items from Table(${table.tableName})');
+          'Fetched ${parsedList.length} items from Table(${table.tableName}) took : ${DateTime.now().difference(currentTime).inMilliseconds} ms');
 
       return parsedList;
     } catch (e) {
@@ -563,8 +545,128 @@ abstract class TunaiDB<T> {
   }
 
   Future<List<Map<String, Object?>>> rawQuery(String query) async {
-    logRaw('Raw query: $query');
-    return await _db.rawQuery(query);
+    logAction('Raw query: $query');
+    final currentTime = DateTime.now();
+    final result = await _db.rawQuery(query);
+    logAction(
+        'Raw query: $query took : ${DateTime.now().difference(currentTime).inMilliseconds} ms, result: ${result.length} items');
+    return result;
+  }
+
+  Future<void> _manualUpsertBatch({
+    required DatabaseExecutor executor,
+    required DBField primaryKeyField,
+    required List<T> chunk,
+    Map<String, Object?> Function(T data)? toMap,
+  }) async {
+    // Step 1: Convert all items to data maps and collect primary key values
+    final List<Map<String, Object?>> dataMaps = [];
+    final List<Object?> primaryKeyValues = [];
+
+    for (var item in chunk) {
+      try {
+        final dataMap = toMap?.call(item) ?? dbTableDataConverter.toMap(item);
+        dataMaps.add(dataMap);
+        primaryKeyValues.add(dataMap[primaryKeyField.fieldName]);
+      } catch (e) {
+        logError('Failed to convert data to map: $e\n$item');
+        continue;
+      }
+    }
+
+    if (dataMaps.isEmpty) return;
+
+    // Step 2: Fetch all existing primary keys in a single query
+    final existingRows = await executor.query(
+      table.tableName,
+      columns: [primaryKeyField.fieldName],
+      where:
+          '${primaryKeyField.fieldName} IN (${List.filled(primaryKeyValues.length, '?').join(',')})',
+      whereArgs: primaryKeyValues,
+    );
+
+    final existingKeySet =
+        existingRows.map((row) => row[primaryKeyField.fieldName]).toSet();
+
+    // Step 3: Create batch operations for all items
+    final batch = executor.batch();
+
+    for (int i = 0; i < dataMaps.length; i++) {
+      final dataMap = dataMaps[i];
+      final primaryKeyValue = primaryKeyValues[i];
+
+      if (existingKeySet.contains(primaryKeyValue)) {
+        // Update existing record
+        batch.update(
+          table.tableName,
+          dataMap,
+          where: '${primaryKeyField.fieldName} = ?',
+          whereArgs: [primaryKeyValue],
+        );
+      } else {
+        // Insert new record
+        batch.insert(
+          table.tableName,
+          dataMap,
+          conflictAlgorithm: ConflictAlgorithm.ignore,
+        );
+      }
+    }
+
+    // Step 4: Execute all operations in a single batch
+    await batch.commit(noResult: true);
+  }
+
+  Future<void> _manualUpsertJsonsBatch({
+    required DatabaseExecutor executor,
+    required DBField primaryKeyField,
+    required List<Map<String, dynamic>> jsonList,
+  }) async {
+    if (jsonList.isEmpty) return;
+
+    // Step 1: Collect primary key values from all JSON items
+    final List<Object?> primaryKeyValues =
+        jsonList.map((item) => item[primaryKeyField.fieldName]).toList();
+
+    // Step 2: Fetch all existing primary keys in a single query
+    final existingRows = await executor.query(
+      table.tableName,
+      columns: [primaryKeyField.fieldName],
+      where:
+          '${primaryKeyField.fieldName} IN (${List.filled(primaryKeyValues.length, '?').join(',')})',
+      whereArgs: primaryKeyValues,
+    );
+
+    final existingKeySet =
+        existingRows.map((row) => row[primaryKeyField.fieldName]).toSet();
+
+    // Step 3: Create batch operations for all items
+    final batch = executor.batch();
+
+    for (int i = 0; i < jsonList.length; i++) {
+      final dataMap = jsonList[i];
+      final primaryKeyValue = primaryKeyValues[i];
+
+      if (existingKeySet.contains(primaryKeyValue)) {
+        // Update existing record
+        batch.update(
+          table.tableName,
+          dataMap,
+          where: '${primaryKeyField.fieldName} = ?',
+          whereArgs: [primaryKeyValue],
+        );
+      } else {
+        // Insert new record
+        batch.insert(
+          table.tableName,
+          dataMap,
+          conflictAlgorithm: ConflictAlgorithm.ignore,
+        );
+      }
+    }
+
+    // Step 4: Execute all operations in a single batch
+    await batch.commit(noResult: true);
   }
 
   Future<void> _manualUpsert({
@@ -634,22 +736,20 @@ abstract class TunaiDB<T> {
     return rawQuery;
   }
 
-  Future<bool> _isSqliteVersionSupportUpsert() async {
-    // Get SQLite version
-    var result = await _db.rawQuery('SELECT sqlite_version()');
-    var sqliteVersion = result.first.values.first as String;
+  void logFetch(String message) {
+    TunaiDBInitializer.logger.logFetch('${table.tableName} -> $message');
+  }
 
-    // Split the version number into major, minor, patch
-    var versionParts = sqliteVersion.split('.');
-    var major = int.parse(versionParts[0]);
-    var minor = int.parse(versionParts[1]);
+  void logRaw(String message) {
+    TunaiDBInitializer.logger.logRaw('${table.tableName} -> $message');
+  }
 
-    // If the SQLite version is 3.24.0 or higher, use ON CONFLICT DO UPDATE
-    if (major > 3 || (major == 3 && minor >= 24)) {
-      return true;
-    } else {
-      return false;
-    }
+  void logAction(String message) {
+    TunaiDBInitializer.logger.logAction('${table.tableName} -> $message');
+  }
+
+  void logError(String message) {
+    TunaiDBInitializer.logger.logError('${table.tableName} ! $message');
   }
 }
 
