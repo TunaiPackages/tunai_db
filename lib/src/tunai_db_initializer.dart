@@ -63,11 +63,16 @@ class TunaiDBInitializer {
     String uniqueKey, {
     bool resetDB = false,
     bool updateDB = true,
-    bool isInIsolate = false,
+    bool? readOnly = false,
+    bool? singleInstance = true,
   }) async {
-    //updated
     try {
-      await _initDB(uniqueKey, resetDB: resetDB);
+      await _initDB(
+        uniqueKey,
+        resetDB: resetDB,
+        readOnly: readOnly,
+        singleInstance: singleInstance,
+      );
       if (updateDB) {
         await updateTables(_database!, _allTables);
       }
@@ -85,7 +90,8 @@ class TunaiDBInitializer {
   Future<void> _initDB(
     String uniqueKey, {
     bool resetDB = false,
-    bool isInIsolate = false,
+    bool? readOnly = false,
+    bool? singleInstance = true,
   }) async {
     try {
       String dbName = '${_dbName}_$uniqueKey.db';
@@ -140,6 +146,8 @@ class TunaiDBInitializer {
             version: 1,
             onCreate: _onCreate,
             onConfigure: _onConfigure,
+            readOnly: readOnly,
+            singleInstance: singleInstance,
           ),
         );
       } else {
@@ -148,6 +156,8 @@ class TunaiDBInitializer {
           version: 1,
           onCreate: _onCreate,
           onConfigure: _onConfigure,
+          readOnly: readOnly,
+          singleInstance: singleInstance,
         );
       }
 
