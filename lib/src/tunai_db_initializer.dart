@@ -63,6 +63,7 @@ class TunaiDBInitializer {
     String uniqueKey, {
     bool resetDB = false,
     bool updateDB = true,
+    bool isInIsolate = false,
   }) async {
     //updated
     try {
@@ -77,7 +78,15 @@ class TunaiDBInitializer {
     }
   }
 
-  Future<void> _initDB(String uniqueKey, {bool resetDB = false}) async {
+  Future<void> close() async {
+    return _database?.close();
+  }
+
+  Future<void> _initDB(
+    String uniqueKey, {
+    bool resetDB = false,
+    bool isInIsolate = false,
+  }) async {
     try {
       String dbName = '${_dbName}_$uniqueKey.db';
       _logger.logInit('* TunaiDB Initializing -> $dbName...');
