@@ -15,7 +15,7 @@ abstract class TunaiDBLogger {
 class TunaiDBLoggerImpl implements TunaiDBLogger {
   @override
   void logInit(String message) {
-    debugPrint('TunaiDB: $message');
+    // debugPrint('TunaiDB: $message');
   }
 
   @override
