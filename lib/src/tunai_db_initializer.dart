@@ -77,6 +77,8 @@ class TunaiDBInitializer {
         await updateTables(_database!, _allTables);
       }
       _isSupportUpsert = await _isSqliteVersionSupportUpsert(database);
+
+      await _createIndexes();
     } catch (e) {
       _logger.logInit('TunaiDB Failed to initialize. $e');
       rethrow;
@@ -171,6 +173,18 @@ class TunaiDBInitializer {
     }
   }
 
+  Future<void> _createIndexes() async {
+    try {
+      for (var table in _allTables) {
+        if (table.createIndexQuery.isNotEmpty) {
+          await _database!.execute(table.createIndexQuery);
+        }
+      }
+    } catch (e) {
+      _logger.logInit('* TunaiDB failed to create indexes : $e. skipping...');
+    }
+  }
+
   Future<void> _onConfigure(Database database) async {
     try {
       if (Platform.isIOS || Platform.isMacOS) {
@@ -232,12 +246,6 @@ class TunaiDBInitializer {
         );
 
         await db.execute(table.createTableQuery);
-        if (table.createIndexQuery.isNotEmpty) {
-          _logger.logInit(
-            '* TunaiDB creating table index...\n${table.createIndexQuery}\n',
-          );
-          await db.execute(table.createIndexQuery);
-        }
       }
     } catch (e) {
       _logger.logInit('* TunaiDB failed to create table $e');
