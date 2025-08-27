@@ -5,7 +5,7 @@ class DBTrigger {
   final TriggerEvent event;
   final String body;
 
-  DBTrigger({
+  const DBTrigger({
     required this.name,
     required this.table,
     required this.timing,
