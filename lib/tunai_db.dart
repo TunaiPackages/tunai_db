@@ -13,3 +13,4 @@ export 'src/model/db_inner_join_table.dart';
 export 'src/model/grouped_db_filter.dart';
 export 'src/utils/query_helper.dart';
 export 'src/model/db_left_join.dart';
+export 'src/model/db_trigger.dart';

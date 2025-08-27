@@ -1,4 +1,3 @@
-import 'dart:developer';
 import 'dart:io';
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
@@ -6,6 +5,7 @@ import 'package:path_provider/path_provider.dart' as pathP;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart' as p;
 import 'package:tunai_db/src/model/db_field.dart';
+import 'package:tunai_db/src/model/db_trigger.dart';
 import 'package:tunai_db/src/tunai_db.dart';
 import 'package:tunai_db/src/tunai_db_logger.dart';
 import 'model/db_table.dart';
@@ -28,6 +28,10 @@ class TunaiDBInitializer {
 
   TunaiDBInitializer._internal();
 
+  void setTriggers(List<DBTrigger> triggers) {
+    _allTriggers = triggers;
+  }
+
   void setTables(List<DBTable> tables) {
     _allTables = tables;
   }
@@ -38,8 +42,9 @@ class TunaiDBInitializer {
 
   String _dbName = 'tunaiDB';
   List<DBTable> _allTables = [];
-
   List<DBTable> get allTables => _allTables;
+  List<DBTrigger> _allTriggers = [];
+  List<DBTrigger> get allTriggers => _allTriggers;
 
   void logging(String message) {
     debugPrint(message);
@@ -76,6 +81,7 @@ class TunaiDBInitializer {
       if (updateDB) {
         await updateTables(_database!, _allTables);
       }
+      await synchronizeTriggers();
       _isSupportUpsert = await _isSqliteVersionSupportUpsert(database);
     } catch (e) {
       _logger.logInit('TunaiDB Failed to initialize. $e');
@@ -85,6 +91,92 @@ class TunaiDBInitializer {
 
   Future<void> close() async {
     return _database?.close();
+  }
+
+  /// Manually synchronize triggers with the database
+  /// This method can be called independently to update triggers
+  Future<void> synchronizeTriggers() async {
+    if (_database == null) {
+      throw Exception('Tunai Database is not initialized');
+    }
+    await _synchronizeTriggers(_database!);
+  }
+
+  /// Get current triggers from the database
+  Future<List<Map<String, dynamic>>> getCurrentTriggers() async {
+    if (_database == null) {
+      throw Exception('Tunai Database is not initialized');
+    }
+
+    try {
+      List<Map<String, dynamic>> currentTriggers = await _database!.rawQuery(
+          "SELECT name, tbl_name as table_name, sql FROM sqlite_master WHERE type='trigger'");
+      return currentTriggers;
+    } catch (e) {
+      _logger.logError('* TunaiDB Failed to get current triggers: $e');
+      rethrow;
+    }
+  }
+
+  /// Get trigger synchronization status
+  Future<Map<String, dynamic>> getTriggerSyncStatus() async {
+    if (_database == null) {
+      throw Exception('Tunai Database is not initialized');
+    }
+
+    try {
+      List<Map<String, dynamic>> currentTriggers = await getCurrentTriggers();
+
+      // Create maps for comparison
+      Map<String, Map<String, dynamic>> currentTriggersMap = {};
+      for (var trigger in currentTriggers) {
+        currentTriggersMap[trigger['name']] = trigger;
+      }
+
+      Map<String, DBTrigger> expectedTriggersMap = {};
+      for (var trigger in _allTriggers) {
+        expectedTriggersMap[trigger.name] = trigger;
+      }
+
+      // Find differences
+      List<String> triggersToDelete = [];
+      List<DBTrigger> triggersToCreate = [];
+      List<DBTrigger> triggersToUpdate = [];
+
+      for (var triggerName in currentTriggersMap.keys) {
+        if (!expectedTriggersMap.containsKey(triggerName)) {
+          triggersToDelete.add(triggerName);
+        }
+      }
+
+      for (var trigger in _allTriggers) {
+        if (!currentTriggersMap.containsKey(trigger.name)) {
+          triggersToCreate.add(trigger);
+        } else {
+          var currentTrigger = currentTriggersMap[trigger.name]!;
+          var currentSQL = currentTrigger['sql'] ?? '';
+          var expectedSQL = trigger.toSQL().trim();
+
+          if (_normalizeSQL(currentSQL) != _normalizeSQL(expectedSQL)) {
+            triggersToUpdate.add(trigger);
+          }
+        }
+      }
+
+      return {
+        'currentTriggers': currentTriggers.length,
+        'expectedTriggers': _allTriggers.length,
+        'triggersToDelete': triggersToDelete,
+        'triggersToCreate': triggersToCreate.map((t) => t.name).toList(),
+        'triggersToUpdate': triggersToUpdate.map((t) => t.name).toList(),
+        'isSynchronized': triggersToDelete.isEmpty &&
+            triggersToCreate.isEmpty &&
+            triggersToUpdate.isEmpty,
+      };
+    } catch (e) {
+      _logger.logError('* TunaiDB Failed to get trigger sync status: $e');
+      rethrow;
+    }
   }
 
   Future<void> _initDB(
@@ -244,6 +336,87 @@ class TunaiDBInitializer {
       '* TunaiDB deleting table ${db.table.tableName}...',
     );
     return await _database!.delete(db.table.tableName);
+  }
+
+  /// Fetches current triggers from the database and synchronizes them with expected triggers
+  Future<void> _synchronizeTriggers(Database db) async {
+    try {
+      // Fetch current triggers from the database
+      List<Map<String, dynamic>> currentTriggers = await db.rawQuery(
+          "SELECT name, tbl_name as table_name, sql FROM sqlite_master WHERE type='trigger'");
+
+      _logger.logInit(
+          '* TunaiDB Found ${currentTriggers.length} existing triggers');
+
+      // Create a map of current triggers for easy lookup
+      Map<String, Map<String, dynamic>> currentTriggersMap = {};
+      for (var trigger in currentTriggers) {
+        currentTriggersMap[trigger['name']] = trigger;
+      }
+
+      // Create a map of expected triggers for easy lookup
+      Map<String, DBTrigger> expectedTriggersMap = {};
+      for (var trigger in _allTriggers) {
+        expectedTriggersMap[trigger.name] = trigger;
+      }
+
+      // Find triggers to delete (exist in current but not in expected)
+      List<String> triggersToDelete = [];
+      for (var triggerName in currentTriggersMap.keys) {
+        if (!expectedTriggersMap.containsKey(triggerName)) {
+          triggersToDelete.add(triggerName);
+        }
+      }
+
+      // Find triggers to create (exist in expected but not in current)
+      List<DBTrigger> triggersToCreate = [];
+      for (var trigger in _allTriggers) {
+        if (!currentTriggersMap.containsKey(trigger.name)) {
+          triggersToCreate.add(trigger);
+        }
+      }
+
+      // Find triggers to update (exist in both but may have different definitions)
+      List<DBTrigger> triggersToUpdate = [];
+      for (var trigger in _allTriggers) {
+        if (currentTriggersMap.containsKey(trigger.name)) {
+          var currentTrigger = currentTriggersMap[trigger.name]!;
+          var currentSQL = currentTrigger['sql'] ?? '';
+          var expectedSQL = trigger.toSQL().trim();
+
+          // Compare SQL statements (normalize whitespace for comparison)
+          if (_normalizeSQL(currentSQL) != _normalizeSQL(expectedSQL)) {
+            triggersToUpdate.add(trigger);
+          }
+        }
+      }
+
+      // Delete triggers that are no longer needed
+      for (var triggerName in triggersToDelete) {
+        _logger.logInit('* TunaiDB Deleting trigger: $triggerName');
+        await db.execute('DROP TRIGGER IF EXISTS $triggerName');
+      }
+
+      // Update triggers that have changed
+      for (var trigger in triggersToUpdate) {
+        _logger.logInit('* TunaiDB Updating trigger: ${trigger.name}');
+        await db.execute('DROP TRIGGER IF EXISTS ${trigger.name}');
+        await db.execute(trigger.toSQL());
+      }
+
+      // Create new triggers
+      for (var trigger in triggersToCreate) {
+        _logger.logInit('* TunaiDB Creating trigger: ${trigger.name}');
+        await db.execute(trigger.toSQL());
+      }
+
+      _logger.logInit('* TunaiDB Trigger synchronization completed: '
+          '${triggersToDelete.length} deleted, '
+          '${triggersToUpdate.length} updated, '
+          '${triggersToCreate.length} created');
+    } catch (e) {
+      _logger.logError('* TunaiDB Failed to synchronize triggers: $e');
+    }
   }
 
   Future<void> updateTables(Database db, List<DBTable> dbTables) async {
@@ -580,4 +753,13 @@ Future<bool> _isSqliteVersionSupportUpsert(Database db) async {
         '* TunaiDB failed to check if SQLite version supports upsert. $e');
     return false;
   }
+}
+
+/// Normalizes SQL statements for comparison by removing extra whitespace and newlines
+String _normalizeSQL(String sql) {
+  return sql
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .replaceAll(RegExp(r'[\n\r]'), ' ')
+      .trim()
+      .toLowerCase();
 }
