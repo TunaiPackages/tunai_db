@@ -301,14 +301,14 @@ abstract class TunaiDB<T> {
       }
     }
 
-    // Add filters if provided
     if (filters.isNotEmpty) {
-      String whereClause = ' WHERE ' +
-          filters.map((filterR) {
-            final filter = filterR.filter;
-            final matchedTable = filterR.matchedTable;
-            return '${matchedTable.tableName}.${filter.getQuery()}';
-          }).join(' ${filterJoinType.queryOperator} ');
+      String whereClause = ' WHERE ${filters.map(
+        (filterR) {
+          final filter = filterR.filter;
+          final matchedTable = filterR.matchedTable;
+          return filter.getQuery(nameTag: '${matchedTable.tableName}.');
+        },
+      ).join(' ${filterJoinType.queryOperator} ')}';
       query += whereClause;
     }
 
