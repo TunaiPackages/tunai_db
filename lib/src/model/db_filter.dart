@@ -49,6 +49,8 @@ enum DBFilterType {
 /// - [DBSearchFilter]: Filter for performing text search with LIKE operator
 /// ```dart
 /// DBSearchFilter(fieldName: 'name', searchValue: 'john') // name LIKE '%john%'
+/// DBSearchFilter(fieldName: 'name', searchValue: 'John Doe', caseSensitive: false) // LOWER(name) LIKE LOWER('%john doe%')
+/// DBSearchFilter(fieldName: 'name', searchValue: 'John Doe', ignoreSpaces: true) // LOWER(REPLACE(name, ' ', '')) LIKE LOWER('%johndoe%')
 /// ```
 ///
 /// - [CompositeDBFilter]: Filter for combining multiple filters with AND/OR operators
@@ -107,23 +109,66 @@ class DBSearchFilter extends BaseDBFilter {
   final String fieldName;
   final String searchValue;
   final bool caseSensitive;
+  final bool ignoreSpaces;
 
   const DBSearchFilter({
     required this.fieldName,
     required this.searchValue,
     this.caseSensitive = false,
+    this.ignoreSpaces = false,
   });
+
+  /// Cleans the search value by removing extra spaces and normalizing text
+  String _cleanedSearchValue(String value) {
+    if (ignoreSpaces) {
+      // Remove all spaces and normalize whitespace
+      return value.replaceAll(RegExp(r'\s+'), '').trim();
+    }
+    // Just normalize whitespace (replace multiple spaces with single space)
+    return value.replaceAll(RegExp(r'\s+'), ' ').trim();
+  }
+
+  /// Escapes special SQL characters to prevent SQL injection
+  String _escapeSqlValue(String value) {
+    return value
+        .replaceAll("'", "''") // Escape single quotes
+        .replaceAll('\\', '\\\\') // Escape backslashes
+        .replaceAll('%', '\\%') // Escape LIKE wildcards
+        .replaceAll('_', '\\_'); // Escape LIKE wildcards
+  }
 
   @override
   String getQuery({String nameTag = ''}) {
-    // Escape single quotes in search value to prevent SQL injection
-    final escapedSearchValue = searchValue.replaceAll("'", "''");
+    // Validate inputs
+    if (fieldName.isEmpty) {
+      throw ArgumentError('fieldName cannot be empty');
+    }
+    if (searchValue.isEmpty) {
+      throw ArgumentError('searchValue cannot be empty');
+    }
+
+    // Clean and escape the search value
+    final cleanedValue = _cleanedSearchValue(searchValue);
+    final escapedSearchValue = _escapeSqlValue(cleanedValue);
+
+    // Build the field reference with proper escaping
+    final fieldRef = '$nameTag$fieldName';
 
     if (caseSensitive) {
-      return '$nameTag$fieldName LIKE \'%$escapedSearchValue%\'';
+      if (ignoreSpaces) {
+        // For case-sensitive search with spaces ignored, we need to clean both field and search value
+        return 'REPLACE($fieldRef, \' \', \'\') LIKE \'%$escapedSearchValue%\'';
+      } else {
+        return '$fieldRef LIKE \'%$escapedSearchValue%\'';
+      }
     } else {
-      // Use LOWER() function for case-insensitive search
-      return 'LOWER($nameTag$fieldName) LIKE LOWER(\'%$escapedSearchValue%\')';
+      if (ignoreSpaces) {
+        // For case-insensitive search with spaces ignored, clean both field and search value
+        return 'LOWER(REPLACE($fieldRef, \' \', \'\')) LIKE LOWER(\'%$escapedSearchValue%\')';
+      } else {
+        // Use LOWER() function for case-insensitive search
+        return 'LOWER($fieldRef) LIKE LOWER(\'%$escapedSearchValue%\')';
+      }
     }
   }
 }
