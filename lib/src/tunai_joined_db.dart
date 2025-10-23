@@ -105,7 +105,7 @@ class LeftJoinOnClause {
   final String field2;
 
   const LeftJoinOnClause({
-    required this.filterType,
+    this.filterType = DBFilterType.equal,
     required this.field1,
     required this.field2,
   });
