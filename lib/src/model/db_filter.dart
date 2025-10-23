@@ -115,7 +115,7 @@ class DBSearchFilter extends BaseDBFilter {
     required this.fieldName,
     required this.searchValue,
     this.caseSensitive = false,
-    this.ignoreSpaces = false,
+    this.ignoreSpaces = true,
   });
 
   /// Cleans the search value by removing extra spaces and normalizing text
