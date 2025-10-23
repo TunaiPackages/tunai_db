@@ -245,6 +245,8 @@ abstract class TunaiDB<T> {
     required List<DBInnerJoinTable> tableRecords,
     bool printQuery = false,
     DBFilterJoinType filterJoinType = DBFilterJoinType.and,
+    int? offset,
+    int? limit,
   }) async {
     // Validate that at least one table is provided
     if (tableRecords.isEmpty) {
@@ -308,6 +310,13 @@ abstract class TunaiDB<T> {
             return '${matchedTable.tableName}.${filter.getQuery()}';
           }).join(' ${filterJoinType.queryOperator} ');
       query += whereClause;
+    }
+
+    if (offset != null) {
+      query += ' OFFSET $offset';
+    }
+    if (limit != null) {
+      query += ' LIMIT $limit';
     }
     // Debug print the query if needed
     if (printQuery) {
