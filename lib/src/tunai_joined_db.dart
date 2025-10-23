@@ -41,6 +41,8 @@ class TunaiJoinedDB {
       query += ' LIMIT $limit';
     }
 
+    query += ';';
+
     print('tunai joined db query:\n$query');
 
     return _db.rawQuery(query);
