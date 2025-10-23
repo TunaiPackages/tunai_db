@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:tunai_db/src/model/db_filter.dart';
 import 'package:tunai_db/src/model/db_filter_join_type.dart';
+import 'package:tunai_db/src/model/db_sorter.dart';
 import 'package:tunai_db/src/model/db_table.dart';
 import 'package:tunai_db/src/tunai_db_initializer.dart';
 
@@ -12,6 +13,7 @@ class TunaiJoinedDB {
     required List<LeftJoinedDB> joinedTables,
     int? offset,
     int? limit,
+    DBSorter? sorter,
   }) {
     String query = 'SELECT ${mainTable.selectedFieldsQuery}';
 
@@ -39,6 +41,10 @@ class TunaiJoinedDB {
     }
     if (limit != null) {
       query += ' LIMIT $limit';
+    }
+
+    if (sorter != null) {
+      query += ' ORDER BY ${sorter.getSortQuery()}';
     }
 
     query += ';';
