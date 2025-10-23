@@ -64,7 +64,7 @@ enum DBFilterType {
 ///
 abstract class BaseDBFilter {
   const BaseDBFilter();
-  String getQuery();
+  String getQuery({String nameTag = ''});
 }
 
 class DBFilterIn extends BaseDBFilter {
@@ -138,9 +138,9 @@ class CompositeDBFilter extends BaseDBFilter {
   });
 
   @override
-  String getQuery() {
+  String getQuery({String nameTag = ''}) {
     return filters
-        .map((e) => e.getQuery())
+        .map((e) => e.getQuery(nameTag: nameTag))
         .join(' ${filterJoinType.queryOperator} ');
   }
 }
