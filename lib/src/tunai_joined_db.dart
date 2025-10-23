@@ -98,7 +98,7 @@ class LeftJoinedDB extends JoinedDB {
   });
 
   String get leftJoinQuery =>
-      'LEFT JOIN ${table.tableName} $applyTag ON ${onClause.getQuery()}';
+      'LEFT JOIN ${table.tableName} $applyTag ${onClause.getQuery()}';
 }
 
 class LeftJoinOnClause {
