@@ -187,9 +187,13 @@ class TunaiDBInitializer {
   }) async {
     try {
       String dbName = '${_dbName}_$uniqueKey.db';
-      _logger.logInit('* TunaiDB Initializing -> $dbName...');
+      bool useFFI = Platform.isWindows || Platform.isAndroid;
+      _logger.logInit('* TunaiDB Initializing (useFFI: $useFFI) -> $dbName...');
       String path;
-      if (Platform.isWindows) {
+
+      if (useFFI) {
+        _logger.logInit('* TunaiDB Platform is Windows or Android, using FFI');
+
         sqfliteFfiInit();
         databaseFactory = databaseFactoryFfi;
         final databasePath = await pathP.getApplicationSupportDirectory();
@@ -206,32 +210,24 @@ class TunaiDBInitializer {
       bool databaseExist = await databaseExists(path);
 
       if (!databaseExist) {
-        // Make sure the directory exists
-
         try {
           await Directory(path).create(recursive: true);
-          print('* Created directory at $path');
-          // await File(path).writeAsString('flushing', flush: true);
-          // print('* Flushed directory at $path');
+          _logger.logInit('* Created directory at $path');
         } catch (e) {
-          print('Failed to create directory at path : $path, $e');
+          _logger.logError('Failed to create directory at path : $path, $e');
           rethrow;
         }
 
-        try {
-          await deleteDatabase(path);
-        } catch (e) {
-          print('Failed to delete database at path : $path, $e');
-        }
+        await deleteDatabase(path).catchError((e) {
+          _logger.logError('Failed to delete database at path : $path, $e');
+        });
       } else if (resetDB) {
-        try {
-          await deleteDatabase(path);
-        } catch (e) {
-          print('Failed to delete database at path : $path, $e');
-        }
+        await deleteDatabase(path).catchError((e) {
+          _logger.logError('Failed to delete database at path : $path, $e');
+        });
       }
 
-      if (Platform.isWindows) {
+      if (useFFI) {
         _database = await databaseFactoryFfi.openDatabase(
           path,
           options: OpenDatabaseOptions(
@@ -394,20 +390,31 @@ class TunaiDBInitializer {
       // Delete triggers that are no longer needed
       for (var triggerName in triggersToDelete) {
         _logger.logInit('* TunaiDB Deleting trigger: $triggerName');
-        await db.execute('DROP TRIGGER IF EXISTS $triggerName');
+        await db.execute('DROP TRIGGER IF EXISTS $triggerName').catchError((e) {
+          _logger
+              .logError('* TunaiDB Failed to delete trigger: $triggerName, $e');
+        });
       }
 
       // Update triggers that have changed
       for (var trigger in triggersToUpdate) {
         _logger.logInit('* TunaiDB Updating trigger: ${trigger.name}');
-        await db.execute('DROP TRIGGER IF EXISTS ${trigger.name}');
-        await db.execute(trigger.toSQL());
+        try {
+          await db.execute('DROP TRIGGER IF EXISTS ${trigger.name}');
+          await db.execute(trigger.toSQL());
+        } catch (e) {
+          _logger.logError(
+              '* TunaiDB Failed to update trigger: ${trigger.name}, $e');
+        }
       }
 
       // Create new triggers
       for (var trigger in triggersToCreate) {
         _logger.logInit('* TunaiDB Creating trigger: ${trigger.name}');
-        await db.execute(trigger.toSQL());
+        await db.execute(trigger.toSQL()).catchError((e) {
+          _logger.logError(
+              '* TunaiDB Failed to create trigger: ${trigger.name}, $e');
+        });
       }
 
       _logger.logInit('* TunaiDB Trigger synchronization completed: '
