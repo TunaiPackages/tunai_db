@@ -26,7 +26,7 @@ class TunaiDBTrxnQueue {
   Future<T> add<T>({
     String? operationName,
     required Future<T> Function(Transaction txn) operation,
-    Duration timeout = const Duration(seconds: 30),
+    Duration timeout = const Duration(minutes: 30),
   }) async {
     final completer = Completer<T>();
 

@@ -22,7 +22,8 @@ abstract class TunaiDB<T> {
     List<T> list, {
     Map<String, Object?> Function(T data)? toMap,
     List<DBFilter> filters = const [],
-    int batchSize = 1000,
+    int batchSize = 200,
+    int transactionSize = 5000,
   }) async {
     if (list.isEmpty) return;
     final currentTime = DateTime.now();
@@ -34,52 +35,67 @@ abstract class TunaiDB<T> {
     bool isSupportUpsert = TunaiDBInitializer.isSupportUpsert;
     logAction(
         'Inserting list ${list.length}, isSupportUpsert: $isSupportUpsert, primaryKeyField: ${primaryKeyField.fieldName}');
-    return TunaiDBTrxnQueue().add(
-      operationName: '${table.tableName} InsertList',
-      operation: (trxn) async {
-        try {
-          for (var i = 0; i < list.length; i += batchSize) {
-            final end =
-                (i + batchSize < list.length) ? i + batchSize : list.length;
-            final chunk = list.sublist(i, end);
 
-            if (isSupportUpsert) {
-              final batch = trxn.batch();
-              for (var item in chunk) {
-                late final Map<String, Object?> dataMap;
-                try {
-                  dataMap =
-                      toMap?.call(item) ?? dbTableDataConverter.toMap(item);
-                } catch (e) {
-                  logError('Failed to convert data to map: $e\n$item');
-                  continue;
+    // Process in transaction-sized chunks to prevent transaction log accumulation
+    for (var i = 0; i < list.length; i += transactionSize) {
+      final end = (i + transactionSize < list.length)
+          ? i + transactionSize
+          : list.length;
+      final transactionChunk = list.sublist(i, end);
+
+      await TunaiDBTrxnQueue().add(
+        operationName: '${table.tableName} InsertList ${i}-${end}',
+        operation: (trxn) async {
+          try {
+            for (var j = 0; j < transactionChunk.length; j += batchSize) {
+              final batchEnd = (j + batchSize < transactionChunk.length)
+                  ? j + batchSize
+                  : transactionChunk.length;
+              final chunk = transactionChunk.sublist(j, batchEnd);
+
+              if (isSupportUpsert) {
+                var batch = trxn.batch();
+
+                for (var item in chunk) {
+                  late final Map<String, Object?> dataMap;
+                  try {
+                    dataMap =
+                        toMap?.call(item) ?? dbTableDataConverter.toMap(item);
+                  } catch (e) {
+                    logError('Failed to convert data to map: $e\n$item');
+                    continue;
+                  }
+
+                  String query = _getUpsertRawQuery(
+                    dataMap: dataMap,
+                    primaryFieldName: primaryKeyField.fieldName,
+                  );
+
+                  batch.execute(query);
                 }
 
-                String query = _getUpsertRawQuery(
-                  dataMap: dataMap,
-                  primaryFieldName: primaryKeyField.fieldName,
+                await batch.commit(noResult: true);
+                logAction(
+                    'Inserted chunk ${chunk.length} items to Table(${table.tableName})');
+              } else {
+                await _manualUpsertBatch(
+                  executor: trxn,
+                  primaryKeyField: primaryKeyField,
+                  chunk: chunk,
+                  toMap: toMap,
                 );
-
-                batch.execute(query);
               }
-              await batch.commit(noResult: true);
-            } else {
-              await _manualUpsertBatch(
-                executor: trxn,
-                primaryKeyField: primaryKeyField,
-                chunk: chunk,
-                toMap: toMap,
-              );
             }
+          } catch (e) {
+            logError('Failed to insert list: $e');
+            rethrow;
           }
-        } catch (e) {
-          logError('Failed to insert list: $e');
-          rethrow;
-        }
-        logAction(
-            'Inserted ${list.length} items to Table(${table.tableName}) took: ${DateTime.now().difference(currentTime).inMilliseconds} ms');
-      },
-    );
+        },
+      );
+    }
+
+    logAction(
+        'Inserted ${list.length} items to Table(${table.tableName}) took: ${DateTime.now().difference(currentTime).inMilliseconds} ms');
   }
 
   Future<void> insertJsons(List<Map<String, dynamic>> list) async {
