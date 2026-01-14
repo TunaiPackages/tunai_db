@@ -23,7 +23,7 @@ abstract class TunaiDB<T> {
     Map<String, Object?> Function(T data)? toMap,
     List<DBFilter> filters = const [],
     int batchSize = 200,
-    int transactionSize = 5000,
+    int transactionSize = 1000,
   }) async {
     if (list.isEmpty) return;
     final currentTime = DateTime.now();
@@ -36,7 +36,6 @@ abstract class TunaiDB<T> {
     logAction(
         'Inserting list ${list.length}, isSupportUpsert: $isSupportUpsert, primaryKeyField: ${primaryKeyField.fieldName}');
 
-    // Process in transaction-sized chunks to prevent transaction log accumulation
     for (var i = 0; i < list.length; i += transactionSize) {
       final end = (i + transactionSize < list.length)
           ? i + transactionSize
