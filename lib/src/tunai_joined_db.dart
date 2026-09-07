@@ -4,6 +4,7 @@ import 'package:tunai_db/src/model/db_filter_join_type.dart';
 import 'package:tunai_db/src/model/db_sorter.dart';
 import 'package:tunai_db/src/model/db_table.dart';
 import 'package:tunai_db/src/tunai_db_initializer.dart';
+import 'utils/limit_offset_generator.dart';
 
 class TunaiJoinedDB {
   Database get _db => TunaiDBInitializer().database;
@@ -15,6 +16,7 @@ class TunaiJoinedDB {
     int? limit,
     DBSorter? sorter,
   }) {
+    final arguments = <Object?>[];
     String query = 'SELECT ${mainTable.selectedFieldsQuery}';
 
     for (var joinedTable in joinedTables) {
@@ -24,34 +26,29 @@ class TunaiJoinedDB {
     query += ' FROM ${mainTable.table.tableName} ${mainTable.applyTag} ';
 
     for (var joinedTable in joinedTables) {
-      query += joinedTable.leftJoinQuery;
+      query += '${joinedTable.leftJoinQuery} ';
     }
 
     List<String> whereQueries = [
-      mainTable.whereQuery,
-      ...joinedTables.map((e) => e.whereQuery),
+      mainTable.buildWhereQuery(arguments: arguments),
+      ...joinedTables.map((e) => e.buildWhereQuery(arguments: arguments)),
     ].where((e) => e.isNotEmpty).toList();
 
     if (whereQueries.isNotEmpty) {
-      query += ' WHERE ${whereQueries.join(' AND ')}';
-    }
-
-    if (offset != null) {
-      query += ' OFFSET $offset';
-    }
-    if (limit != null) {
-      query += ' LIMIT $limit';
+      query += ' WHERE ${whereQueries.map((q) => '($q)').join(' AND ')}';
     }
 
     if (sorter != null) {
       query += ' ORDER BY ${sorter.getSortQuery()}';
     }
 
+    query += LimitOffsetGenerator(limit: limit, offset: offset).generate();
     query += ';';
 
-    print('tunai joined db query:\n$query');
+    TunaiDBInitializer.logger
+        .logFetch('Fetching joined rows from ${mainTable.table.tableName}');
 
-    return _db.rawQuery(query);
+    return _db.rawQuery(query, arguments);
   }
 }
 
@@ -81,13 +78,17 @@ class JoinedDB {
     return query;
   }
 
-  String get whereQuery {
+  String get whereQuery => buildWhereQuery();
+
+  String buildWhereQuery({List<Object?>? arguments}) {
     if (filters == null || filters!.isEmpty) {
       return '';
     }
 
     return filters!
-        .map((e) => e.getQuery(nameTag: '$applyTag.'))
+        .map((e) => arguments == null
+            ? e.getQuery(nameTag: '$applyTag.')
+            : e.parameterized(arguments, nameTag: '$applyTag.'))
         .join(' ${filterJoinType.queryOperator} ');
   }
 }

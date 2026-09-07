@@ -138,3 +138,10 @@ instead of deleting data or silently continuing.
 
 See [Automatic schema updates](docs/AUTOMATIC_SCHEMA_UPDATES.md) for supported
 changes, default values, atomic rebuilds, concurrency, and intentional boundaries.
+
+## Runnable regression lab
+
+The [Flutter Test Lab](example/TEST_LAB.md) runs 68 real-database scenarios with
+category filters, crucial-feature checks and JSON reports. It shares its suite
+with automated host and native integration tests and keeps package defects
+visible as failures.

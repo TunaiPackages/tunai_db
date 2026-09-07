@@ -13,6 +13,7 @@ class LeftJoinQueryBuilder {
   const LeftJoinQueryBuilder();
 
   String buildLeftJoinQuery({
+    List<Object?>? arguments,
     required DBTable mainTable,
     required List<DBLeftJoin> leftJoins,
     List<BaseDBFilter> filters = const [],
@@ -43,7 +44,7 @@ class LeftJoinQueryBuilder {
       filters: filters,
       groupedFilters: groupedFilters,
       filterJoinType: filterJoinType,
-    ).generateWithWhereKeyword();
+    ).generateWithWhereKeyword(arguments: arguments);
     query += whereClause;
 
     // Add ORDER BY clause

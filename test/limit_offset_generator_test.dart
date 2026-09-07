@@ -15,10 +15,10 @@ void main() {
       expect(result, equals(' LIMIT 10'));
     });
 
-    test('should generate OFFSET clause only', () {
+    test('should supply SQLite unlimited LIMIT for an offset-only page', () {
       final generator = LimitOffsetGenerator(offset: 20);
       final result = generator.generate();
-      expect(result, equals(' OFFSET 20'));
+      expect(result, equals(' LIMIT -1 OFFSET 20'));
     });
 
     test('should generate both LIMIT and OFFSET clauses', () {

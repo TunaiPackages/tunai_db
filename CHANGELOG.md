@@ -1,3 +1,11 @@
+## Query and write correctness
+
+- Bind built-in filter and write values; preserve NULL and scalar types.
+- Reject invalid modeled keys and conversion failures, preserving transaction rollback.
+- Correct literal search, empty/integer sums, join grouping and pagination.
+- Add the runnable 68-scenario Flutter Test Lab and legacy-write fallback tests.
+- Document compatibility and explicit conflict policies in `docs/QUERY_AND_WRITE_SAFETY.md`.
+
 ## Unreleased
 
 - Bring the existing production API into main so consumers can pin main commits.

@@ -14,3 +14,7 @@
 - Preserve unrelated work and generated Flutter/plugin churn. Commits use
   Conventional Commits and `Co-Authored-By: Codex <noreply@openai.com>` when Codex
   assists; other agents should identify themselves accurately.
+
+- For CRUD/query changes, also run `flutter test test/lab` from `example/`.
+  Keep every fixed regression enabled. Use its native integration suite for
+  platform-sensitive persistence changes; see `example/TEST_LAB.md`.

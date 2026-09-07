@@ -12,12 +12,16 @@ import 'model/db_filter.dart';
 import 'model/db_sorter.dart';
 import 'tunai_db_initializer.dart';
 import 'tunai_db_trxn_queue.dart';
+import 'utils/sql_value.dart';
+import 'utils/limit_offset_generator.dart';
 
 abstract class TunaiDB<T> {
   DBTable get table;
   Database get _db => TunaiDBInitializer().database;
   DBDataConverter<T> get dbTableDataConverter;
 
+  /// Transaction chunks commit independently. Any failed chunk rolls back and
+  /// rejects the returned Future; previously committed chunks remain durable.
   Future<void> insertList(
     List<T> list, {
     Map<String, Object?> Function(T data)? toMap,
@@ -25,193 +29,83 @@ abstract class TunaiDB<T> {
     int batchSize = 200,
     int transactionSize = 1000,
   }) async {
-    if (list.isEmpty) return;
-    final currentTime = DateTime.now();
-    final primaryKeyField = table.primaryKeyField;
-    if (primaryKeyField.fieldName == 'none') {
-      logError('Primary key field is not set for table ${table.tableName}');
-      return;
+    if (batchSize <= 0 || transactionSize <= 0) {
+      throw ArgumentError('batchSize and transactionSize must be positive');
     }
-    bool isSupportUpsert = TunaiDBInitializer.isSupportUpsert;
-    logAction(
-        'Inserting list ${list.length}, isSupportUpsert: $isSupportUpsert, primaryKeyField: ${primaryKeyField.fieldName}');
-
+    if (list.isEmpty) return;
+    final key = _requirePrimaryKey();
     for (var i = 0; i < list.length; i += transactionSize) {
-      final end = (i + transactionSize < list.length)
-          ? i + transactionSize
-          : list.length;
-      final transactionChunk = list.sublist(i, end);
-
+      final end =
+          i + transactionSize < list.length ? i + transactionSize : list.length;
+      final chunk = list.sublist(i, end);
       await TunaiDBTrxnQueue().add(
-        operationName: '${table.tableName} InsertList ${i}-${end}',
-        operation: (trxn) async {
-          try {
-            for (var j = 0; j < transactionChunk.length; j += batchSize) {
-              final batchEnd = (j + batchSize < transactionChunk.length)
-                  ? j + batchSize
-                  : transactionChunk.length;
-              final chunk = transactionChunk.sublist(j, batchEnd);
-
-              if (isSupportUpsert) {
-                var batch = trxn.batch();
-
-                for (var item in chunk) {
-                  late final Map<String, Object?> dataMap;
-                  try {
-                    dataMap =
-                        toMap?.call(item) ?? dbTableDataConverter.toMap(item);
-                  } catch (e) {
-                    logError('Failed to convert data to map: $e\n$item');
-                    continue;
-                  }
-
-                  String query = _getUpsertRawQuery(
-                    dataMap: dataMap,
-                    primaryFieldName: primaryKeyField.fieldName,
-                  );
-
-                  batch.execute(query);
-                }
-
-                await batch.commit(noResult: true);
-                logAction(
-                    'Inserted chunk ${chunk.length} items to Table(${table.tableName})');
-              } else {
-                await _manualUpsertBatch(
-                  executor: trxn,
-                  primaryKeyField: primaryKeyField,
-                  chunk: chunk,
-                  toMap: toMap,
-                );
-              }
-            }
-          } catch (e) {
-            logError('Failed to insert list: $e');
-            rethrow;
+        operationName: '${table.tableName} InsertList $i-$end',
+        operation: (transaction) async {
+          for (var j = 0; j < chunk.length; j += batchSize) {
+            final batchEnd =
+                j + batchSize < chunk.length ? j + batchSize : chunk.length;
+            // Conversion stays inside the transaction: a bad later batch also
+            // rolls back earlier batches in this transaction chunk.
+            final maps = chunk
+                .sublist(j, batchEnd)
+                .map((item) =>
+                    toMap?.call(item) ?? dbTableDataConverter.toMap(item))
+                .toList();
+            await _upsertMaps(transaction, key, maps);
           }
         },
       );
     }
-
-    logAction(
-        'Inserted ${list.length} items to Table(${table.tableName}) took: ${DateTime.now().difference(currentTime).inMilliseconds} ms');
   }
 
   Future<void> insertJsons(List<Map<String, dynamic>> list) async {
-    final currentTime = DateTime.now();
-    final primaryKeyField = table.primaryKeyField;
-    if (primaryKeyField.fieldName == 'none') {
-      logError('Primary key field is not set for table ${table.tableName}');
-      return;
-    }
-
-    bool isSupportUpsert = TunaiDBInitializer.isSupportUpsert;
-    logAction(
-        'Inserting jsons ${list.length}, isSupportUpsert : ${isSupportUpsert}, primaryKeyField : ${primaryKeyField.fieldName}');
-
+    if (list.isEmpty) return;
+    final key = _requirePrimaryKey();
     await TunaiDBTrxnQueue().add(
       operationName: '${table.tableName} InsertJsons',
-      operation: (trxn) async {
-        if (isSupportUpsert) {
-          final batch = trxn.batch();
-          for (var item in list) {
-            String query = _getUpsertRawQuery(
-              dataMap: item,
-              primaryFieldName: primaryKeyField.fieldName,
-            );
-
-            batch.execute(query);
-          }
-          await batch.commit(noResult: true);
-        } else {
-          await _manualUpsertJsonsBatch(
-            executor: trxn,
-            primaryKeyField: primaryKeyField,
-            jsonList: list,
-          );
-        }
-      },
+      operation: (transaction) => _upsertMaps(transaction, key, list),
     );
-
-    logAction(
-        'Inserted ${list.length} items to Table(${table.tableName}) took : ${DateTime.now().difference(currentTime).inMilliseconds} ms');
   }
 
+  /// Default replace means a non-destructive primary-key upsert. Explicit
+  /// alternative conflict policies use SQLite INSERT semantics.
   Future<void> insert(
     T data, {
     ConflictAlgorithm conflictAlgorithm = ConflictAlgorithm.replace,
     Map<String, Object?> Function(T data)? toMap,
   }) async {
-    logAction('Inserting : $data to Table(${table.tableName})');
-    final primaryKeyField = table.primaryKeyField;
-    if (primaryKeyField.fieldName == 'none') {
-      logError('Primary key field is not set for table ${table.tableName}');
-      return;
-    }
-    bool isSupportUpsert = TunaiDBInitializer.isSupportUpsert;
-    final dataMap = toMap?.call(data) ?? dbTableDataConverter.toMap(data);
-
+    final key = _requirePrimaryKey();
+    final map =
+        _sqliteMap(toMap?.call(data) ?? dbTableDataConverter.toMap(data));
     await TunaiDBTrxnQueue().add(
       operationName: '${table.tableName} Insert',
-      operation: (trxn) async {
-        if (isSupportUpsert) {
-          await trxn.rawInsert(
-            _getUpsertRawQuery(
-              dataMap: dataMap,
-              primaryFieldName: primaryKeyField.fieldName,
-            ),
-          );
+      operation: (transaction) async {
+        if (conflictAlgorithm != ConflictAlgorithm.replace) {
+          await transaction.insert(table.tableName, map,
+              conflictAlgorithm: conflictAlgorithm);
         } else {
-          final existingRows = await trxn.query(
-            table.tableName,
-            where: '${primaryKeyField.fieldName} = ?',
-            whereArgs: [
-              dataMap[primaryKeyField.fieldName]
-            ], // Fix: Use the actual primary key value
-          );
-
-          if (existingRows.isNotEmpty) {
-            final existingData = existingRows.first;
-            final updatedData = Map<String, Object?>.from(existingData)
-              ..addAll(dataMap);
-
-            await trxn.update(
-              table.tableName,
-              updatedData,
-              where: '${primaryKeyField.fieldName} = ?',
-              whereArgs: [
-                dataMap[primaryKeyField.fieldName]
-              ], // Fix: Use the actual primary key value
-            );
-          } else {
-            await trxn.insert(
-              table.tableName,
-              dataMap,
-              conflictAlgorithm: ConflictAlgorithm.ignore,
-            );
-          }
+          await _upsertMaps(transaction, key, [map]);
         }
       },
     );
-
-    logAction('Inserted : $data to Table(${table.tableName})');
   }
 
   Future<int> getCount({
     List<DBFilter> filters = const [],
     DBFilterJoinType filterJoinType = DBFilterJoinType.and,
   }) async {
+    final arguments = <Object?>[];
     String whereClause = '';
 
     if (filters.isNotEmpty) {
       whereClause = 'WHERE ' +
           filters
-              .map((e) => e.getQuery())
+              .map((e) => e.parameterized(arguments))
               .join(' ${filterJoinType.queryOperator} ');
     }
 
-    final List<Map<String, Object?>> data = await _db
-        .rawQuery('SELECT COUNT(*) FROM ${table.tableName} $whereClause;');
+    final List<Map<String, Object?>> data = await _db.rawQuery(
+        'SELECT COUNT(*) FROM ${table.tableName} $whereClause;', arguments);
 
     return data.first['COUNT(*)'] as int;
   }
@@ -221,9 +115,13 @@ abstract class TunaiDB<T> {
     await TunaiDBTrxnQueue().add(
       operationName: '${table.tableName} Delete',
       operation: (trxn) async {
+        final arguments = <Object?>[];
+        final where =
+            filters.map((e) => e.parameterized(arguments)).join(' AND ');
         await trxn.delete(
           table.tableName,
-          where: filters.map((e) => e.getQuery()).join(' AND '),
+          where: where.isEmpty ? null : where,
+          whereArgs: arguments,
         );
       },
     );
@@ -246,10 +144,14 @@ abstract class TunaiDB<T> {
     await TunaiDBTrxnQueue().add(
       operationName: '${table.tableName} Update',
       operation: (trxn) async {
+        final arguments = <Object?>[];
+        final where =
+            filters.map((e) => e.parameterized(arguments)).join(' AND ');
         await trxn.update(
           table.tableName,
-          dbTableDataConverter.toMap(newData),
-          where: filters.map((e) => e.getQuery()).join(' AND '),
+          _sqliteMap(dbTableDataConverter.toMap(newData)),
+          where: where.isEmpty ? null : where,
+          whereArgs: arguments,
         );
       },
     );
@@ -271,6 +173,7 @@ abstract class TunaiDB<T> {
     logFetch(
         'Fetching with tables : ${tableRecords.map((e) => e.table.tableName).join(', ')}');
 
+    final arguments = <Object?>[];
     String query = 'SELECT ';
 
     for (var field in table.fields) {
@@ -321,25 +224,21 @@ abstract class TunaiDB<T> {
         (filterR) {
           final filter = filterR.filter;
           final matchedTable = filterR.matchedTable;
-          return filter.getQuery(nameTag: '${matchedTable.tableName}.');
+          return filter.parameterized(arguments,
+              nameTag: '${matchedTable.tableName}.');
         },
       ).join(' ${filterJoinType.queryOperator} ')}';
       query += whereClause;
     }
 
-    if (offset != null) {
-      query += ' OFFSET $offset';
-    }
-    if (limit != null) {
-      query += ' LIMIT $limit';
-    }
+    query += LimitOffsetGenerator(limit: limit, offset: offset).generate();
     // Debug print the query if needed
     if (printQuery) {
-      print('TunaiDB FetchWithTables Query :\n$query\n');
+      logRaw('FetchWithTables: $query');
     }
 
     // Execute the query and return results
-    List<Map<String, dynamic>> results = await _db.rawQuery(query);
+    List<Map<String, dynamic>> results = await _db.rawQuery(query, arguments);
 
     logFetch('Fetched ${results.length} items from Table(${table.tableName})');
     return results;
@@ -352,6 +251,7 @@ abstract class TunaiDB<T> {
     DBFilterJoinType filterJoinType = DBFilterJoinType.and,
   }) async {
     logFetch('Fetching with inner join');
+    final arguments = <Object?>[];
     String query = 'SELECT ';
 
     for (var field in table.fields) {
@@ -389,13 +289,13 @@ abstract class TunaiDB<T> {
     if (filters.isNotEmpty) {
       String whereClause = 'WHERE ' +
           filters
-              .map((filter) => filter.getQuery(nameTag: 'ori.'))
+              .map((filter) => filter.parameterized(arguments, nameTag: 'ori.'))
               .join(' ${filterJoinType.queryOperator} ');
       // TunaiDBLogger.logAction('where clause : $whereClause');
       query += whereClause;
     }
 
-    List<Map<String, dynamic>> results = await _db.rawQuery(query);
+    List<Map<String, dynamic>> results = await _db.rawQuery(query, arguments);
 
     logFetch('Fetched ${results.length} items from Table(${table.tableName})');
 
@@ -416,8 +316,10 @@ abstract class TunaiDB<T> {
     logFetch('Fetching with left joins from Table(${table.tableName})');
     final currentTime = DateTime.now();
 
+    final arguments = <Object?>[];
     // Build query using QueryHelper
     String query = QueryHelper().buildLeftJoinQuery(
+      arguments: arguments,
       mainTable: table,
       leftJoins: leftJoins,
       filters: filters,
@@ -430,11 +332,11 @@ abstract class TunaiDB<T> {
 
     // Debug print the query if needed
     if (printQuery) {
-      print('TunaiDB FetchWithLeftJoins Query:\n$query\n');
+      logRaw('FetchWithLeftJoins: $query');
     }
 
     // Execute the query
-    List<Map<String, dynamic>> list = await _db.rawQuery(query);
+    List<Map<String, dynamic>> list = await _db.rawQuery(query, arguments);
 
     try {
       final List<T> parsedList = list.map((item) {
@@ -467,26 +369,28 @@ abstract class TunaiDB<T> {
   }) async {
     logFetch('Fetching from Table(${table.tableName})');
     final currentTime = DateTime.now();
+    final arguments = <Object?>[];
     List<Map<String, dynamic>> list = [];
 
     if (filters.isEmpty && groupedFilters.isEmpty) {
       list = await _db.query(
         table.tableName,
         orderBy: sorter?.getSortQuery(),
-        limit: limit,
+        limit: limit ?? (offset == null ? null : -1),
         offset: offset,
       );
     } else {
       list = await _db.query(
         table.tableName,
         where: QueryHelper().getWhereQuery(
+          arguments: arguments,
           filters: filters,
           groupedFilters: groupedFilters,
           filterJoinType: filterJoinType,
         ),
-        // whereArgs: filter.matchings,
+        whereArgs: arguments,
         orderBy: sorter?.getSortQuery(),
-        limit: limit,
+        limit: limit ?? (offset == null ? null : -1),
         offset: offset,
       );
     }
@@ -522,18 +426,19 @@ abstract class TunaiDB<T> {
     logFetch('Fetching by field values');
     try {
       final currentTime = DateTime.now();
+      final arguments = values.map(sqliteValue).toList();
       String query =
-          'SELECT * FROM ${table.tableName} WHERE $fieldName IN (${values.map((e) => '$e').join(',')})';
+          'SELECT * FROM ${table.tableName} WHERE $fieldName IN (${List.filled(values.length, '?').join(',')})';
       if (filters != null && filters.isNotEmpty) {
         query += ' AND ';
         query += filters
-            .map((f) => '${f.getQuery()}')
+            .map((f) => f.parameterized(arguments))
             .join(' ${filterJoinType.queryOperator} ');
       }
       if (sorter != null) {
         query += ' ORDER BY ${sorter.getSortQuery()}';
       }
-      List<Map<String, dynamic>> list = await _db.rawQuery(query);
+      List<Map<String, dynamic>> list = await _db.rawQuery(query, arguments);
       final List<T> parsedList = list.map((item) {
         try {
           return fromMap?.call(item) ?? dbTableDataConverter.fromMap(item);
@@ -557,7 +462,7 @@ abstract class TunaiDB<T> {
     try {
       List<Map<String, dynamic>> content =
           await _db.rawQuery('SELECT SUM($fieldName) FROM ${table.tableName}');
-      double sum = content.first.values.first as double;
+      final sum = (content.first.values.first as num?)?.toDouble() ?? 0.0;
 
       logFetch(
           'Sum of field $fieldName from Table(${table.tableName}) is $sum');
@@ -577,187 +482,63 @@ abstract class TunaiDB<T> {
     return result;
   }
 
-  Future<void> _manualUpsertBatch({
-    required DatabaseExecutor executor,
-    required DBField primaryKeyField,
-    required List<T> chunk,
-    Map<String, Object?> Function(T data)? toMap,
-  }) async {
-    // Step 1: Convert all items to data maps and collect primary key values
-    final List<Map<String, Object?>> dataMaps = [];
-    final List<Object?> primaryKeyValues = [];
-
-    for (var item in chunk) {
-      try {
-        final dataMap = toMap?.call(item) ?? dbTableDataConverter.toMap(item);
-        dataMaps.add(dataMap);
-        primaryKeyValues.add(dataMap[primaryKeyField.fieldName]);
-      } catch (e) {
-        logError('Failed to convert data to map: $e\n$item');
-        continue;
-      }
+  DBField _requirePrimaryKey() {
+    final keys = table.fields.where((field) => field.isPrimaryKey).toList();
+    if (keys.length != 1) {
+      throw StateError(
+          'Table ${table.tableName} must declare exactly one primary key');
     }
-
-    if (dataMaps.isEmpty) return;
-
-    // Step 2: Fetch all existing primary keys in a single query
-    final existingRows = await executor.query(
-      table.tableName,
-      columns: [primaryKeyField.fieldName],
-      where:
-          '${primaryKeyField.fieldName} IN (${List.filled(primaryKeyValues.length, '?').join(',')})',
-      whereArgs: primaryKeyValues,
-    );
-
-    final existingKeySet =
-        existingRows.map((row) => row[primaryKeyField.fieldName]).toSet();
-
-    // Step 3: Create batch operations for all items
-    final batch = executor.batch();
-
-    for (int i = 0; i < dataMaps.length; i++) {
-      final dataMap = dataMaps[i];
-      final primaryKeyValue = primaryKeyValues[i];
-
-      if (existingKeySet.contains(primaryKeyValue)) {
-        // Update existing record
-        batch.update(
-          table.tableName,
-          dataMap,
-          where: '${primaryKeyField.fieldName} = ?',
-          whereArgs: [primaryKeyValue],
-        );
-      } else {
-        // Insert new record
-        batch.insert(
-          table.tableName,
-          dataMap,
-          conflictAlgorithm: ConflictAlgorithm.ignore,
-        );
-      }
-    }
-
-    // Step 4: Execute all operations in a single batch
-    await batch.commit(noResult: true);
+    return keys.single;
   }
 
-  Future<void> _manualUpsertJsonsBatch({
-    required DatabaseExecutor executor,
-    required DBField primaryKeyField,
-    required List<Map<String, dynamic>> jsonList,
-  }) async {
-    if (jsonList.isEmpty) return;
-
-    // Step 1: Collect primary key values from all JSON items
-    final List<Object?> primaryKeyValues =
-        jsonList.map((item) => item[primaryKeyField.fieldName]).toList();
-
-    // Step 2: Fetch all existing primary keys in a single query
-    final existingRows = await executor.query(
-      table.tableName,
-      columns: [primaryKeyField.fieldName],
-      where:
-          '${primaryKeyField.fieldName} IN (${List.filled(primaryKeyValues.length, '?').join(',')})',
-      whereArgs: primaryKeyValues,
-    );
-
-    final existingKeySet =
-        existingRows.map((row) => row[primaryKeyField.fieldName]).toSet();
-
-    // Step 3: Create batch operations for all items
-    final batch = executor.batch();
-
-    for (int i = 0; i < jsonList.length; i++) {
-      final dataMap = jsonList[i];
-      final primaryKeyValue = primaryKeyValues[i];
-
-      if (existingKeySet.contains(primaryKeyValue)) {
-        // Update existing record
-        batch.update(
-          table.tableName,
-          dataMap,
-          where: '${primaryKeyField.fieldName} = ?',
-          whereArgs: [primaryKeyValue],
-        );
-      } else {
-        // Insert new record
-        batch.insert(
-          table.tableName,
-          dataMap,
-          conflictAlgorithm: ConflictAlgorithm.ignore,
-        );
-      }
-    }
-
-    // Step 4: Execute all operations in a single batch
-    await batch.commit(noResult: true);
+  Map<String, Object?> _sqliteMap(Map<String, Object?> map) {
+    if (map.isEmpty) throw ArgumentError('An upsert map cannot be empty');
+    return map.map((key, value) => MapEntry(key, sqliteValue(value)));
   }
 
-  Future<void> _manualUpsert({
-    required DatabaseExecutor executor,
-    required DBField primaryKeyField,
-    required Map<String, Object?> dataMap,
-    required Batch batch,
-  }) async {
-    // Step 1: Fetch the existing row if it exists
-    final existingRows = await executor.query(
-      table.tableName,
-      where: '${primaryKeyField.fieldName} = ?',
-      whereArgs: [dataMap[primaryKeyField.fieldName]],
-    );
-
-    if (existingRows.isNotEmpty) {
-      // Merge the existing row with the new data
-      final existingData = existingRows.first;
-      final updatedData = Map<String, Object?>.from(existingData)
-        ..addAll(dataMap);
-
-      // Step 2: Update the row with the merged data
-      batch.update(
-        table.tableName,
-        updatedData,
-        where: '${primaryKeyField.fieldName} = ?',
-        whereArgs: [
-          updatedData[primaryKeyField.fieldName],
-        ],
-      );
+  Future<void> _upsertMaps(DatabaseExecutor executor, DBField key,
+      List<Map<String, Object?>> maps) async {
+    if (TunaiDBInitializer.isSupportUpsert) {
+      final batch = executor.batch();
+      for (final input in maps) {
+        final map = _sqliteMap(input);
+        final columns = map.keys.map(quoteSqlIdentifier).join(', ');
+        final assignments = map.keys
+            .where((column) => column != key.fieldName)
+            .map((column) =>
+                '${quoteSqlIdentifier(column)} = excluded.${quoteSqlIdentifier(column)}')
+            .join(', ');
+        final action =
+            assignments.isEmpty ? 'DO NOTHING' : 'DO UPDATE SET $assignments';
+        batch.execute(
+          'INSERT INTO ${quoteSqlIdentifier(table.tableName)} ($columns) '
+          'VALUES (${List.filled(map.length, '?').join(', ')}) '
+          'ON CONFLICT(${quoteSqlIdentifier(key.fieldName)}) $action',
+          map.values.toList(),
+        );
+      }
+      await batch.commit(noResult: true);
     } else {
-      // Step 3: Insert the item if it doesn't exist
-      batch.insert(
-        table.tableName,
-        dataMap,
-        conflictAlgorithm:
-            ConflictAlgorithm.ignore, // Avoids duplicate insertion errors
-      );
-    }
-  }
-
-  String _getUpsertRawQuery({
-    required Map<String, Object?> dataMap,
-    required String primaryFieldName,
-  }) {
-    final columns = dataMap.keys.join(', ');
-    final values = dataMap.values.map((value) {
-      if (value is String) {
-        return "'${_escapeSingleQuotes(value)}'";
+      // Execute in order so repeated keys in one chunk see earlier writes.
+      // Do not IGNORE unrelated constraint failures on legacy SQLite.
+      for (final input in maps) {
+        final map = _sqliteMap(input);
+        final where = '${quoteSqlIdentifier(key.fieldName)} = ?';
+        final arguments = [map[key.fieldName]];
+        final existing = await executor.query(table.tableName,
+            columns: [key.fieldName],
+            where: where,
+            whereArgs: arguments,
+            limit: 1);
+        if (existing.isEmpty) {
+          await executor.insert(table.tableName, map);
+        } else if (map.keys.any((column) => column != key.fieldName)) {
+          await executor.update(table.tableName, map,
+              where: where, whereArgs: arguments);
+        }
       }
-      return "'$value'";
-    }).join(', ');
-
-    // Exclude the primary key from the update clause
-    final updateClause = dataMap.keys
-        .where((column) => column != primaryFieldName)
-        .map((column) => "$column = excluded.$column")
-        .join(', ');
-
-    final rawQuery = '''
-    INSERT INTO ${table.tableName} ($columns)
-    VALUES ($values)
-    ON CONFLICT(${primaryFieldName}) DO UPDATE SET
-    $updateClause;
-  ''';
-
-    return rawQuery;
+    }
+    logAction('Upserted ${maps.length} rows in ${table.tableName}');
   }
 
   void logFetch(String message) {
@@ -775,8 +556,4 @@ abstract class TunaiDB<T> {
   void logError(String message) {
     TunaiDBInitializer.logger.logError('${table.tableName} ! $message');
   }
-}
-
-String _escapeSingleQuotes(String input) {
-  return input.replaceAll("'", "''");
 }

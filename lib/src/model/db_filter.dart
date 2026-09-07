@@ -1,4 +1,5 @@
 import 'package:tunai_db/src/model/db_filter_join_type.dart';
+import '../utils/sql_value.dart';
 
 enum DBFilterType {
   equal,
@@ -80,8 +81,7 @@ class DBFilterIn extends BaseDBFilter {
 
   @override
   String getQuery({String nameTag = ''}) {
-    String formattedMatched =
-        matched.map((e) => e is String ? "'$e'" : e.toString()).join(', ');
+    String formattedMatched = matched.map(sqlLiteral).join(', ');
     return '$nameTag$fieldName IN ($formattedMatched)';
   }
 }
@@ -99,8 +99,7 @@ class DBFilter extends BaseDBFilter {
 
   @override
   String getQuery({String nameTag = ''}) {
-    String formattedMatched =
-        matched is String ? "'$matched'" : matched.toString();
+    String formattedMatched = sqlLiteral(matched);
     return '$nameTag$fieldName ${filterType.comparisonOperator} $formattedMatched';
   }
 }
@@ -128,49 +127,26 @@ class DBSearchFilter extends BaseDBFilter {
     return value.replaceAll(RegExp(r'\s+'), ' ').trim();
   }
 
-  /// Escapes special SQL characters to prevent SQL injection
-  String _escapeSqlValue(String value) {
-    return value
-        .replaceAll("'", "''") // Escape single quotes
-        .replaceAll('\\', '\\\\') // Escape backslashes
-        .replaceAll('%', '\\%') // Escape LIKE wildcards
-        .replaceAll('_', '\\_'); // Escape LIKE wildcards
+  String _query(String nameTag, String Function(Object?) valueSql) {
+    if (fieldName.isEmpty) throw ArgumentError('fieldName cannot be empty');
+    if (searchValue.isEmpty) throw ArgumentError('searchValue cannot be empty');
+    final cleaned = _cleanedSearchValue(searchValue);
+    final field = ignoreSpaces
+        ? "REPLACE($nameTag$fieldName, ' ', '')"
+        : '$nameTag$fieldName';
+    if (caseSensitive) {
+      // SQLite LIKE is ASCII case-insensitive even with COLLATE BINARY.
+      return 'INSTR($field, ${valueSql(cleaned)}) > 0';
+    }
+    final pattern = cleaned
+        .replaceAll(r'\', r'\\')
+        .replaceAll('%', r'\%')
+        .replaceAll('_', r'\_');
+    return "LOWER($field) LIKE LOWER(${valueSql('%$pattern%')}) ESCAPE '\\'";
   }
 
   @override
-  String getQuery({String nameTag = ''}) {
-    // Validate inputs
-    if (fieldName.isEmpty) {
-      throw ArgumentError('fieldName cannot be empty');
-    }
-    if (searchValue.isEmpty) {
-      throw ArgumentError('searchValue cannot be empty');
-    }
-
-    // Clean and escape the search value
-    final cleanedValue = _cleanedSearchValue(searchValue);
-    final escapedSearchValue = _escapeSqlValue(cleanedValue);
-
-    // Build the field reference with proper escaping
-    final fieldRef = '$nameTag$fieldName';
-
-    if (caseSensitive) {
-      if (ignoreSpaces) {
-        // For case-sensitive search with spaces ignored, we need to clean both field and search value
-        return 'REPLACE($fieldRef, \' \', \'\') LIKE \'%$escapedSearchValue%\'';
-      } else {
-        return '$fieldRef LIKE \'%$escapedSearchValue%\'';
-      }
-    } else {
-      if (ignoreSpaces) {
-        // For case-insensitive search with spaces ignored, clean both field and search value
-        return 'LOWER(REPLACE($fieldRef, \' \', \'\')) LIKE LOWER(\'%$escapedSearchValue%\')';
-      } else {
-        // Use LOWER() function for case-insensitive search
-        return 'LOWER($fieldRef) LIKE LOWER(\'%$escapedSearchValue%\')';
-      }
-    }
-  }
+  String getQuery({String nameTag = ''}) => _query(nameTag, sqlLiteral);
 }
 
 class CompositeDBFilter extends BaseDBFilter {
@@ -184,8 +160,39 @@ class CompositeDBFilter extends BaseDBFilter {
 
   @override
   String getQuery({String nameTag = ''}) {
-    return filters
-        .map((e) => e.getQuery(nameTag: nameTag))
-        .join(' ${filterJoinType.queryOperator} ');
+    if (filters.isEmpty) {
+      throw ArgumentError('A composite filter cannot be empty');
+    }
+    return '(${filters.map((e) => e.getQuery(nameTag: nameTag)).join(' ${filterJoinType.queryOperator} ')})';
+  }
+}
+
+/// Adds parameter binding without adding abstract members to custom filters.
+/// Custom getQuery implementations remain trusted, application-owned SQL.
+extension DBFilterParameters on BaseDBFilter {
+  String parameterized(List<Object?> arguments, {String nameTag = ''}) {
+    String bind(Object? value) {
+      arguments.add(sqliteValue(value));
+      return '?';
+    }
+
+    final filter = this;
+    if (filter is DBFilter && filter.runtimeType == DBFilter) {
+      return '$nameTag${filter.fieldName} ${filter.filterType.comparisonOperator} ${bind(filter.matched)}';
+    }
+    if (filter is DBFilterIn && filter.runtimeType == DBFilterIn) {
+      return '$nameTag${filter.fieldName} IN (${filter.matched.map(bind).join(', ')})';
+    }
+    if (filter is DBSearchFilter && filter.runtimeType == DBSearchFilter) {
+      return filter._query(nameTag, bind);
+    }
+    if (filter is CompositeDBFilter &&
+        filter.runtimeType == CompositeDBFilter) {
+      if (filter.filters.isEmpty) {
+        throw ArgumentError('A composite filter cannot be empty');
+      }
+      return '(${filter.filters.map((f) => f.parameterized(arguments, nameTag: nameTag)).join(' ${filter.filterJoinType.queryOperator} ')})';
+    }
+    return getQuery(nameTag: nameTag);
   }
 }

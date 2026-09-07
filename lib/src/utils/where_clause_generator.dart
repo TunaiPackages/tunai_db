@@ -15,18 +15,22 @@ class WhereClauseGenerator extends QueryGenerator {
   });
 
   @override
-  String generate() {
+  String generate({List<Object?>? arguments}) {
     if (filters.isEmpty && groupedFilters.isEmpty) {
       return '';
     }
 
     String filtersWhere = filters
-        .map((e) => e.getQuery())
+        .map((e) =>
+            arguments == null ? e.getQuery() : e.parameterized(arguments))
         .join(' ${filterJoinType.queryOperator} ');
 
-    String groupedFiltersWhere = groupedFilters
-        .map((e) => '(${e.getQuery()})')
-        .join(' ${filterJoinType.queryOperator} ');
+    String groupedFiltersWhere = groupedFilters.map((e) {
+      if (e.filters.isEmpty) {
+        throw ArgumentError('A grouped filter cannot be empty');
+      }
+      return '(${e.filters.map((f) => arguments == null ? f.getQuery() : f.parameterized(arguments)).join(' ${e.filterJoinType.queryOperator} ')})';
+    }).join(' ${filterJoinType.queryOperator} ');
 
     // Combine filters and grouped filters with proper join operator
     if (filters.isNotEmpty && groupedFilters.isNotEmpty) {
@@ -38,8 +42,8 @@ class WhereClauseGenerator extends QueryGenerator {
     }
   }
 
-  String generateWithWhereKeyword() {
-    final whereClause = generate();
+  String generateWithWhereKeyword({List<Object?>? arguments}) {
+    final whereClause = generate(arguments: arguments);
     if (whereClause.isEmpty) {
       return '';
     }

@@ -1,3 +1,9 @@
+# TunaiDB examples
+
+See [TEST_LAB.md](TEST_LAB.md) for the runnable 68-scenario functional test app,
+automated checks and regression coverage. Run it with
+`flutter run -d macos -t lib/test_lab.dart`.
+
 # example
 
 A new Flutter project.

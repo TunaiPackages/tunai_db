@@ -10,6 +10,7 @@ import 'where_clause_generator.dart';
 
 class QueryHelper {
   String getWhereQuery({
+    List<Object?>? arguments,
     DBFilterJoinType filterJoinType = DBFilterJoinType.and,
     List<BaseDBFilter> filters = const [],
     List<GroupedDBFilter> groupedFilters = const [],
@@ -18,7 +19,7 @@ class QueryHelper {
       filters: filters,
       groupedFilters: groupedFilters,
       filterJoinType: filterJoinType,
-    ).generate();
+    ).generate(arguments: arguments);
   }
 
   String getSelectClauseWithLeftJoins({
@@ -42,6 +43,7 @@ class QueryHelper {
   }
 
   String buildLeftJoinQuery({
+    List<Object?>? arguments,
     required DBTable mainTable,
     required List<DBLeftJoin> leftJoins,
     List<BaseDBFilter> filters = const [],
@@ -52,6 +54,7 @@ class QueryHelper {
     int? offset,
   }) {
     return LeftJoinQueryBuilder().buildLeftJoinQuery(
+      arguments: arguments,
       mainTable: mainTable,
       leftJoins: leftJoins,
       filters: filters,

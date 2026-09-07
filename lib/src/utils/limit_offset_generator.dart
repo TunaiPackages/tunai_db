@@ -13,6 +13,7 @@ class LimitOffsetGenerator extends QueryGenerator {
   String generate() {
     String query = '';
 
+    if (limit == null && offset != null) query += ' LIMIT -1';
     if (limit != null) {
       query += ' LIMIT $limit';
     }
