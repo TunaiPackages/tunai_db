@@ -33,14 +33,23 @@ class DBField {
       definition += ' NOT NULL';
     }
     if (defaultValue != null) {
-      definition +=
-          ' DEFAULT ${defaultValue is String ? _getStringDefaultValue() : defaultValue}';
+      definition += ' DEFAULT $defaultSql';
     }
 
     return definition;
   }
 
-  String _getStringDefaultValue() {
-    return "\'\'";
+  /// SQL literal shared by creation and automatic schema reconciliation.
+  String? get defaultSql {
+    final value = defaultValue;
+    if (value == null) return null;
+    if (value is String) return "'${value.replaceAll("'", "''")}'";
+    if (value is bool) return value ? '1' : '0';
+    if (value is num && value.isFinite) return value.toString();
+    throw ArgumentError.value(
+      value,
+      'defaultValue',
+      'Expected a finite number, bool or String',
+    );
   }
 }

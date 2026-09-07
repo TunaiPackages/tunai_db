@@ -126,3 +126,15 @@ final List<Example> examples = await db.fetch(
 It is actually upsert, which will update the data on conflict
 
 
+
+## Automatic schema updates
+
+Register your `DBTable`/`DBTrigger` declarations and await
+`TunaiDBInitializer().initDatabase(outletKey, updateDB: true)` before app queries.
+The updater automatically creates missing schema and reconciles supported
+existing-column changes while preserving rows and unregistered schema. Ordinary
+changes do not require handwritten migrations. Unsafe transformations roll back
+instead of deleting data or silently continuing.
+
+See [Automatic schema updates](docs/AUTOMATIC_SCHEMA_UPDATES.md) for supported
+changes, default values, atomic rebuilds, concurrency, and intentional boundaries.
