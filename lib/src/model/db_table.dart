@@ -1,19 +1,29 @@
+import 'package:tunai_db/src/model/db_field_type.dart';
+
 import 'db_field.dart';
 
 class DBTable {
   final String tableName;
   final List<DBField> fields;
 
-  DBField get primaryKeyField =>
-      fields.firstWhere((field) => field.isPrimaryKey);
+  DBField get primaryKeyField => fields.firstWhere(
+        (field) => field.isPrimaryKey,
+        orElse: () => const DBField(
+          fieldName: 'none',
+          fieldType: DBFieldType.text,
+        ),
+      );
   List<DBField> get foreignFields =>
       fields.where((field) => field.reference != null).toList();
 
   const DBTable({required this.tableName, required this.fields});
 
+  List<DBField> get indexingFields =>
+      fields.where((field) => field.indexing && !field.isPrimaryKey).toList();
+
   String get createTableQuery {
     String query = 'CREATE TABLE $tableName (';
-    query += fields.map((field) => field.fieldDefinition).join(', ');
+    query += fields.map((field) => field.fieldQuery).join(', ');
     bool hasForeignReference = fields.any((field) => field.reference != null);
     if (hasForeignReference) {
       for (var field in fields) {
@@ -24,6 +34,17 @@ class DBTable {
       }
     }
     query += ')';
+
+    return query;
+  }
+
+  String get createIndexQuery {
+    String query = '';
+
+    for (var field in indexingFields) {
+      query +=
+          'CREATE INDEX ${tableName}_${field.fieldName}_index ON $tableName (${field.fieldName});';
+    }
 
     return query;
   }

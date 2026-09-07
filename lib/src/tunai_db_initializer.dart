@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart' as pathP;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart' as p;
 import 'package:tunai_db/src/model/db_field.dart';
+import 'package:tunai_db/src/model/db_trigger.dart';
 import 'package:tunai_db/src/tunai_db.dart';
 import 'package:tunai_db/src/tunai_db_logger.dart';
 import 'model/db_table.dart';
@@ -16,14 +17,20 @@ class TunaiDBInitializer {
     return _instance;
   }
 
-  static TunaiDBLogger _logger = TunaiDBLogger();
+  static TunaiDBLogger _logger = TunaiDBLoggerImpl();
   static TunaiDBLogger get logger => _logger;
+  static bool _isSupportUpsert = false;
+  static bool get isSupportUpsert => _isSupportUpsert;
 
   static void setLogger(TunaiDBLogger logger) {
     _logger = logger;
   }
 
   TunaiDBInitializer._internal();
+
+  void setTriggers(List<DBTrigger> triggers) {
+    _allTriggers = triggers;
+  }
 
   void setTables(List<DBTable> tables) {
     _allTables = tables;
@@ -35,14 +42,17 @@ class TunaiDBInitializer {
 
   String _dbName = 'tunaiDB';
   List<DBTable> _allTables = [];
-
   List<DBTable> get allTables => _allTables;
+  List<DBTrigger> _allTriggers = [];
+  List<DBTrigger> get allTriggers => _allTriggers;
 
   void logging(String message) {
     debugPrint(message);
   }
 
   Database? _database;
+
+  bool get hasInit => _database != null;
   Database get database {
     if (_database == null) {
       throw Exception('Tunai Database is not initialized');
@@ -50,26 +60,146 @@ class TunaiDBInitializer {
     return _database!;
   }
 
-  Future<void> initDatabase(String uniqueKey) async {
-    //updated
+  void initExistingDatabase(Database database) {
+    _database = database;
+  }
+
+  Future<void> initDatabase(
+    String uniqueKey, {
+    bool resetDB = false,
+    bool updateDB = true,
+    bool? readOnly = false,
+    bool? singleInstance = true,
+  }) async {
     try {
-      await _initDB(uniqueKey);
-      await updateTables(_database!, _allTables);
+      await _initDB(
+        uniqueKey,
+        resetDB: resetDB,
+        readOnly: readOnly,
+        singleInstance: singleInstance,
+      );
+      if (updateDB) {
+        await updateTables(_database!, _allTables);
+      }
+      await synchronizeTriggers();
+      _isSupportUpsert = await _isSqliteVersionSupportUpsert(database);
     } catch (e) {
       _logger.logInit('TunaiDB Failed to initialize. $e');
       rethrow;
     }
   }
 
-  Future<void> _initDB(String uniqueKey) async {
+  Future<void> close() async {
+    return _database?.close();
+  }
+
+  /// Manually synchronize triggers with the database
+  /// This method can be called independently to update triggers
+  Future<void> synchronizeTriggers() async {
+    if (_database == null) {
+      throw Exception('Tunai Database is not initialized');
+    }
+    await _synchronizeTriggers(_database!);
+  }
+
+  /// Get current triggers from the database
+  Future<List<Map<String, dynamic>>> getCurrentTriggers() async {
+    if (_database == null) {
+      throw Exception('Tunai Database is not initialized');
+    }
+
+    try {
+      List<Map<String, dynamic>> currentTriggers = await _database!.rawQuery(
+          "SELECT name, tbl_name as table_name, sql FROM sqlite_master WHERE type='trigger'");
+      return currentTriggers;
+    } catch (e) {
+      _logger.logError('* TunaiDB Failed to get current triggers: $e');
+      rethrow;
+    }
+  }
+
+  /// Get trigger synchronization status
+  Future<Map<String, dynamic>> getTriggerSyncStatus() async {
+    if (_database == null) {
+      throw Exception('Tunai Database is not initialized');
+    }
+
+    try {
+      List<Map<String, dynamic>> currentTriggers = await getCurrentTriggers();
+
+      // Create maps for comparison
+      Map<String, Map<String, dynamic>> currentTriggersMap = {};
+      for (var trigger in currentTriggers) {
+        currentTriggersMap[trigger['name']] = trigger;
+      }
+
+      Map<String, DBTrigger> expectedTriggersMap = {};
+      for (var trigger in _allTriggers) {
+        expectedTriggersMap[trigger.name] = trigger;
+      }
+
+      // Find differences
+      List<String> triggersToDelete = [];
+      List<DBTrigger> triggersToCreate = [];
+      List<DBTrigger> triggersToUpdate = [];
+
+      for (var triggerName in currentTriggersMap.keys) {
+        if (!expectedTriggersMap.containsKey(triggerName)) {
+          triggersToDelete.add(triggerName);
+        }
+      }
+
+      for (var trigger in _allTriggers) {
+        if (!currentTriggersMap.containsKey(trigger.name)) {
+          triggersToCreate.add(trigger);
+        } else {
+          var currentTrigger = currentTriggersMap[trigger.name]!;
+          var currentSQL = currentTrigger['sql'] ?? '';
+          var expectedSQL = trigger.toSQL().trim();
+
+          if (_normalizeSQL(currentSQL) != _normalizeSQL(expectedSQL)) {
+            triggersToUpdate.add(trigger);
+          }
+        }
+      }
+
+      return {
+        'currentTriggers': currentTriggers.length,
+        'expectedTriggers': _allTriggers.length,
+        'triggersToDelete': triggersToDelete,
+        'triggersToCreate': triggersToCreate.map((t) => t.name).toList(),
+        'triggersToUpdate': triggersToUpdate.map((t) => t.name).toList(),
+        'isSynchronized': triggersToDelete.isEmpty &&
+            triggersToCreate.isEmpty &&
+            triggersToUpdate.isEmpty,
+      };
+    } catch (e) {
+      _logger.logError('* TunaiDB Failed to get trigger sync status: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> _initDB(
+    String uniqueKey, {
+    bool resetDB = false,
+    bool? readOnly = false,
+    bool? singleInstance = true,
+  }) async {
     try {
       String dbName = '${_dbName}_$uniqueKey.db';
-      _logger.logInit('* TunaiDB Initializing -> $dbName...');
+      bool useFFI = Platform.isWindows || Platform.isAndroid;
+      _logger.logInit('* TunaiDB Initializing (useFFI: $useFFI) -> $dbName...');
       String path;
-      if (Platform.isWindows) {
+
+      if (useFFI) {
+        _logger.logInit('* TunaiDB Platform is Windows or Android, using FFI');
+
         sqfliteFfiInit();
         databaseFactory = databaseFactoryFfi;
         final databasePath = await pathP.getApplicationSupportDirectory();
+        path = p.join(databasePath.path, dbName);
+      } else if (Platform.isIOS || Platform.isMacOS) {
+        final databasePath = await pathP.getLibraryDirectory();
         path = p.join(databasePath.path, dbName);
       } else {
         final databasePath = await getDatabasesPath();
@@ -80,31 +210,32 @@ class TunaiDBInitializer {
       bool databaseExist = await databaseExists(path);
 
       if (!databaseExist) {
-        // Make sure the directory exists
-
         try {
           await Directory(path).create(recursive: true);
-          print('* Created directory at $path');
-          // await File(path).writeAsString('flushing', flush: true);
-          // print('* Flushed directory at $path');
+          _logger.logInit('* Created directory at $path');
         } catch (e) {
-          print('Failed to create directory at path : $path, $e');
+          _logger.logError('Failed to create directory at path : $path, $e');
           rethrow;
         }
 
-        try {
-          await deleteDatabase(path);
-        } catch (e) {
-          print('Failed to delete database at path : $path, $e');
-        }
+        await deleteDatabase(path).catchError((e) {
+          _logger.logError('Failed to delete database at path : $path, $e');
+        });
+      } else if (resetDB) {
+        await deleteDatabase(path).catchError((e) {
+          _logger.logError('Failed to delete database at path : $path, $e');
+        });
       }
 
-      if (Platform.isWindows) {
+      if (useFFI) {
         _database = await databaseFactoryFfi.openDatabase(
           path,
           options: OpenDatabaseOptions(
             version: 1,
             onCreate: _onCreate,
+            onConfigure: _onConfigure,
+            readOnly: readOnly,
+            singleInstance: singleInstance,
           ),
         );
       } else {
@@ -112,13 +243,58 @@ class TunaiDBInitializer {
           path,
           version: 1,
           onCreate: _onCreate,
+          onConfigure: _onConfigure,
+          readOnly: readOnly,
+          singleInstance: singleInstance,
         );
       }
 
+      final result = await database.rawQuery('SELECT sqlite_version();');
+      final sqliteVersion = result.first.values.first;
       _logger.logInit(
-          '* TunaiDB successfully open database ($dbName) : $_database');
+          '* TunaiDB successfully open database ($dbName) version : $sqliteVersion\npath: $_database\n');
     } catch (e) {
       _logger.logInit('* TunaiDB failed to open database : $e');
+      rethrow;
+    }
+  }
+
+  Future<void> _onConfigure(Database database) async {
+    try {
+      if (Platform.isIOS || Platform.isMacOS) {
+        // On iOS/macOS, we need to handle the "not an error" message
+        try {
+          await database.execute('PRAGMA journal_mode=WAL;');
+        } catch (e) {
+          if (!e.toString().contains('not an error')) {
+            rethrow;
+          }
+        }
+      } else {
+        // For Android and other platforms, use rawQuery instead of execute
+        await database.rawQuery('PRAGMA journal_mode=WAL;');
+      }
+
+      // Additional PRAGMA settings - use rawQuery for all platforms
+      try {
+        await database.rawQuery('PRAGMA synchronous=NORMAL;');
+        await database.rawQuery('PRAGMA temp_store=MEMORY;');
+        await database.rawQuery('PRAGMA cache_size=2000;');
+      } catch (e) {
+        _logger.logInit('Warning: Failed to set some PRAGMA values: $e');
+      }
+
+      // Verify WAL mode
+      final result = await database.rawQuery('PRAGMA journal_mode;');
+      final journalMode = result.first.values.first.toString().toUpperCase();
+      if (journalMode != 'WAL') {
+        _logger.logInit(
+            'Warning: WAL mode not enabled. Current mode: $journalMode');
+      } else {
+        _logger.logInit('Successfully enabled WAL mode');
+      }
+    } catch (e) {
+      _logger.logInit('Error configuring database: $e');
       rethrow;
     }
   }
@@ -138,16 +314,13 @@ class TunaiDBInitializer {
 
   Future<void> _onCreate(Database db, int version) async {
     try {
-      List<Future> listFuture = [];
-
       for (var table in _allTables) {
         _logger.logInit(
           '* TunaiDB creating table...\n${table.createTableQuery}\n',
         );
-        listFuture.add(db.execute(table.createTableQuery));
-      }
 
-      await Future.wait(listFuture);
+        await db.execute(table.createTableQuery);
+      }
     } catch (e) {
       _logger.logInit('* TunaiDB failed to create table $e');
       rethrow;
@@ -161,26 +334,114 @@ class TunaiDBInitializer {
     return await _database!.delete(db.table.tableName);
   }
 
-  Future<void> updateTables(Database db, List<DBTable> dbTables) async {
-    _logger.logInit('* TunaiDB checking for tables\'s updates...');
+  /// Fetches current triggers from the database and synchronizes them with expected triggers
+  Future<void> _synchronizeTriggers(Database db) async {
+    try {
+      // Fetch current triggers from the database
+      List<Map<String, dynamic>> currentTriggers = await db.rawQuery(
+          "SELECT name, tbl_name as table_name, sql FROM sqlite_master WHERE type='trigger'");
 
+      _logger.logInit(
+          '* TunaiDB Found ${currentTriggers.length} existing triggers');
+
+      // Create a map of current triggers for easy lookup
+      Map<String, Map<String, dynamic>> currentTriggersMap = {};
+      for (var trigger in currentTriggers) {
+        currentTriggersMap[trigger['name']] = trigger;
+      }
+
+      // Create a map of expected triggers for easy lookup
+      Map<String, DBTrigger> expectedTriggersMap = {};
+      for (var trigger in _allTriggers) {
+        expectedTriggersMap[trigger.name] = trigger;
+      }
+
+      // Find triggers to delete (exist in current but not in expected)
+      List<String> triggersToDelete = [];
+      for (var triggerName in currentTriggersMap.keys) {
+        if (!expectedTriggersMap.containsKey(triggerName)) {
+          triggersToDelete.add(triggerName);
+        }
+      }
+
+      // Find triggers to create (exist in expected but not in current)
+      List<DBTrigger> triggersToCreate = [];
+      for (var trigger in _allTriggers) {
+        if (!currentTriggersMap.containsKey(trigger.name)) {
+          triggersToCreate.add(trigger);
+        }
+      }
+
+      // Find triggers to update (exist in both but may have different definitions)
+      List<DBTrigger> triggersToUpdate = [];
+      for (var trigger in _allTriggers) {
+        if (currentTriggersMap.containsKey(trigger.name)) {
+          var currentTrigger = currentTriggersMap[trigger.name]!;
+          var currentSQL = currentTrigger['sql'] ?? '';
+          var expectedSQL = trigger.toSQL().trim();
+
+          // Compare SQL statements (normalize whitespace for comparison)
+          if (_normalizeSQL(currentSQL) != _normalizeSQL(expectedSQL)) {
+            triggersToUpdate.add(trigger);
+          }
+        }
+      }
+
+      // Delete triggers that are no longer needed
+      for (var triggerName in triggersToDelete) {
+        _logger.logInit('* TunaiDB Deleting trigger: $triggerName');
+        await db.execute('DROP TRIGGER IF EXISTS $triggerName').catchError((e) {
+          _logger
+              .logError('* TunaiDB Failed to delete trigger: $triggerName, $e');
+        });
+      }
+
+      // Update triggers that have changed
+      for (var trigger in triggersToUpdate) {
+        _logger.logInit('* TunaiDB Updating trigger: ${trigger.name}');
+        try {
+          await db.execute('DROP TRIGGER IF EXISTS ${trigger.name}');
+          await db.execute(trigger.toSQL());
+        } catch (e) {
+          _logger.logError(
+              '* TunaiDB Failed to update trigger: ${trigger.name}, $e');
+        }
+      }
+
+      // Create new triggers
+      for (var trigger in triggersToCreate) {
+        _logger.logInit('* TunaiDB Creating trigger: ${trigger.name}');
+        await db.execute(trigger.toSQL()).catchError((e) {
+          _logger.logError(
+              '* TunaiDB Failed to create trigger: ${trigger.name}, $e');
+        });
+      }
+
+      _logger.logInit('* TunaiDB Trigger synchronization completed: '
+          '${triggersToDelete.length} deleted, '
+          '${triggersToUpdate.length} updated, '
+          '${triggersToCreate.length} created');
+    } catch (e) {
+      _logger.logError('* TunaiDB Failed to synchronize triggers: $e');
+    }
+  }
+
+  Future<void> updateTables(Database db, List<DBTable> dbTables) async {
     try {
       List<Map<String, dynamic>> tables = await db
           .rawQuery("SELECT name FROM sqlite_master WHERE type='table'");
 
-      addMissingTable(
+      await _addMissingTable(
         db: db,
         dbTables: dbTables,
         currentTables: tables,
       );
 
-      dropExtraTable(
+      await _dropExtraTable(
         db: db,
         dbTables: dbTables,
         currentTables: tables,
       );
-
-      // TunaiDBLogger.logInit(tables);
 
       for (var table in tables) {
         DBTable? dbTable =
@@ -189,30 +450,144 @@ class TunaiDBInitializer {
         if (dbTable == null) {
           continue;
         }
-        // TunaiDBLogger.logInit('* -> Checking columns for table ${table['name']}...');
+
         List<Map<String, dynamic>> columns =
             await db.rawQuery("PRAGMA table_info('${table['name']}')");
 
-        addMissingColumns(
+        await _updateColumns(
+          db: db,
+          table: table,
+          dbTable: dbTable,
+          columns: columns,
+          logger: _logger,
+        );
+
+        await _addMissingColumns(
           db: db,
           table: dbTable,
           columns: columns,
         );
 
-        dropExtraColumns(
+        await _updateIndexes(
           db: db,
           table: dbTable,
-          columns: columns,
         );
       }
     } catch (e) {
-      _logger.logInit('* TunaiDB failed to update tables. $e');
+      _logger.logError('* TunaiDB failed to update tables. $e');
       rethrow;
     }
   }
 }
 
-Future<void> addMissingTable({
+Future<void> _updateColumns({
+  required Database db,
+  required Map<String, dynamic> table,
+  required DBTable dbTable,
+  required List<Map<String, dynamic>> columns,
+  required TunaiDBLogger logger,
+}) async {
+  try {
+    List<Future> futures = [];
+    for (var column in columns) {
+      futures.add(_updateColumn(
+        db: db,
+        dbTable: dbTable,
+        column: column,
+        logger: logger,
+      ));
+    }
+    await Future.wait(futures);
+  } catch (e) {
+    logger.logError('* TunaiDB failed to update columns. $e');
+  }
+}
+
+Future<void> _updateColumn({
+  required Database db,
+  required DBTable dbTable,
+  required Map<String, dynamic> column,
+  required TunaiDBLogger logger,
+}) async {
+  try {
+    DBField? dbField = dbTable.fields.firstWhereOrNull(
+      (field) => field.fieldName == column['name'],
+    );
+
+    if (dbField == null) {
+      TunaiDBInitializer.logger.logInit(
+          '* -> Dropping column ${column['name']} from table ${dbTable.tableName}...');
+      await db.execute(
+          "ALTER TABLE ${dbTable.tableName} DROP COLUMN ${column['name']}");
+    } else {
+      bool fieldUpdated = (dbField.isPrimaryKey ? 1 : 0) != column['pk'] ||
+          dbField.fieldType.query != column['type'];
+      if (fieldUpdated) {
+        TunaiDBInitializer.logger.logInit(
+            '* -> Updating column ${column['name']} in table ${dbTable.tableName}...');
+        await db.execute(
+            "ALTER TABLE ${dbTable.tableName} RENAME TO ${dbTable.tableName}_old");
+        await db.execute(dbTable.createTableQuery);
+        await db.execute(
+            "INSERT INTO ${dbTable.tableName} SELECT * FROM ${dbTable.tableName}_old");
+        await db.execute("DROP TABLE ${dbTable.tableName}_old");
+      }
+    }
+  } catch (e) {
+    logger
+        .logError('* TunaiDB failed to update column : ${column['name']}. $e');
+  }
+}
+
+Future<void> _updateIndexes({
+  required Database db,
+  required DBTable table,
+}) async {
+  try {
+    final List<Map<String, Object?>> currentIndexes = await db.rawQuery("""
+SELECT name
+FROM sqlite_master
+WHERE type = 'index' AND tbl_name = '${table.tableName}';
+""");
+
+    for (var currentIndex in currentIndexes) {
+      bool isAutoGenerated =
+          (currentIndex['name'] as String).contains('sqlite_autoindex');
+      if (isAutoGenerated) continue;
+
+      bool keepIndex = table.indexingFields.any((f) =>
+          '${table.tableName}_${f.fieldName}_index' == currentIndex['name']);
+
+      if (!keepIndex) {
+        TunaiDBInitializer.logger.logInit(
+            '* -> Dropping index ${currentIndex['name']} from table ${table.tableName}...');
+        await db.execute('DROP INDEX ${currentIndex['name']}');
+      }
+    }
+
+    for (var indexing in table.indexingFields) {
+      final currentIndex = currentIndexes.firstWhereOrNull((element) =>
+          element['name'] == '${table.tableName}_${indexing.fieldName}_index');
+
+      if (currentIndex == null) {
+        TunaiDBInitializer.logger.logInit(
+            '* -> Creating index for ${indexing.fieldName} in table ${table.tableName}...');
+        await db.execute('''
+CREATE INDEX ${table.tableName}_${indexing.fieldName}_index
+ON ${table.tableName} (${indexing.fieldName});
+''');
+      } else {
+        // TunaiDBInitializer.logger.logInit(
+        //     '* -> Index for ${indexing.fieldName} in table ${dbTable.tableName} already exists...');
+      }
+    }
+  } catch (e) {
+    TunaiDBInitializer.logger.logError(
+        '* TunaiDB failed to update indexes for table ${table.tableName}. $e');
+  }
+}
+
+Future<void> _addMissingTable({
   required Database db,
   required List<DBTable> dbTables,
   required List<Map<String, dynamic>> currentTables,
@@ -226,13 +601,16 @@ Future<void> addMissingTable({
         '* -> Adding missing tables...\n${missingTables.map((table) => table.tableName).join('\n')}');
     List<Future> listFuture = [];
     for (var table in missingTables) {
-      listFuture.add(db.execute(table.createTableQuery));
+      listFuture.add(db.execute(table.createTableQuery).catchError((e, trace) {
+        TunaiDBInitializer.logger.logError(
+            '* TunaiDB failed to create table ${table.tableName}. $e');
+      }));
     }
     await Future.wait(listFuture);
   }
 }
 
-Future<void> dropExtraTable({
+Future<void> _dropExtraTable({
   required Database db,
   required List<DBTable> dbTables,
   required List<Map<String, dynamic>> currentTables,
@@ -246,39 +624,69 @@ Future<void> dropExtraTable({
         '* -> Dropping extra tables...\n${extraTables.map((table) => table['name']).join('\n')}');
     List<Future> listFuture = [];
     for (var table in extraTables) {
-      listFuture.add(db.execute('DROP TABLE ${table['name']}'));
+      listFuture
+          .add(db.execute('DROP TABLE ${table['name']}').catchError((e, trace) {
+        TunaiDBInitializer.logger
+            .logError('* TunaiDB failed to drop table ${table['name']}. $e');
+      }));
     }
     await Future.wait(listFuture);
   }
 }
 
-Future<void> addMissingColumns({
+Future<void> _addMissingColumns({
   required Database db,
   required DBTable table,
   required List<Map<String, dynamic>> columns,
 }) async {
-  List<DBField> missingColumns = table.fields.where((field) {
-    return !columns.any((column) => column['name'] == field.fieldName);
-  }).toList();
-  if (missingColumns
-      .any((element) => element.isPrimaryKey || element.reference != null)) {
-    TunaiDBInitializer.logger.logInit(
-        '* -> Missing Columns contain primary or foreign key, rebuilding table ${table.tableName}...');
-    await rebuildTable(db: db, table: table, columns: columns);
-  } else if (missingColumns.isNotEmpty) {
-    TunaiDBInitializer.logger.logInit(
-        '* -> Adding missing columns to table ${table.tableName}...\n${missingColumns.map((field) => field.fieldDefinition).join('\n')}');
-    List<Future> listFuture = [];
-    for (var field in missingColumns) {
-      listFuture.add(db.execute(
-          'ALTER TABLE ${table.tableName} ADD COLUMN ${field.fieldDefinition}'));
+  try {
+    Map<String, int> fieldNameCounts = {};
+    for (var field in table.fields) {
+      fieldNameCounts[field.fieldName] =
+          (fieldNameCounts[field.fieldName] ?? 0) + 1;
+    }
+    List<String> duplicateFields = fieldNameCounts.entries
+        .where((entry) => entry.value > 1)
+        .map((entry) => entry.key)
+        .toList();
+    if (duplicateFields.isNotEmpty) {
+      TunaiDBInitializer.logger.logError(
+          'Duplicate field names found in table ${table.tableName}: ${duplicateFields.join(", ")}');
     }
 
-    await Future.wait(listFuture);
+    List<DBField> missingColumns = table.fields.where((field) {
+      return !columns.any((column) => column['name'] == field.fieldName);
+    }).toList();
+
+    if (missingColumns
+        .any((element) => element.isPrimaryKey || element.reference != null)) {
+      TunaiDBInitializer.logger.logInit(
+          '* -> Missing Columns contain primary or foreign key, rebuilding table ${table.tableName}...');
+      await _rebuildTable(db: db, table: table, columns: columns);
+    } else if (missingColumns.isNotEmpty) {
+      TunaiDBInitializer.logger.logInit(
+          '* -> Adding missing columns to table ${table.tableName}...\n${missingColumns.map((field) => field.fieldQuery).join('\n')}');
+      List<Future> listFuture = [];
+      for (var field in missingColumns) {
+        listFuture.add(db
+            .execute(
+          'ALTER TABLE ${table.tableName} ADD COLUMN ${field.fieldQuery}',
+        )
+            .catchError((e, trace) {
+          TunaiDBInitializer.logger.logError(
+              '* TunaiDB failed to add column ${field.fieldName} to table ${table.tableName}. $e');
+        }));
+      }
+
+      await Future.wait(listFuture);
+    }
+  } catch (e) {
+    TunaiDBInitializer.logger.logError(
+        '* TunaiDB failed to add missing columns to table ${table.tableName}. $e');
   }
 }
 
-Future<void> rebuildTable({
+Future<void> _rebuildTable({
   required Database db,
   required DBTable table,
   required List<Map<String, dynamic>> columns,
@@ -299,7 +707,7 @@ ALTER TABLE ${table.tableName} RENAME TO $oldTableName;
   await db.execute('DROP TABLE $oldTableName');
 }
 
-Future<void> dropExtraColumns({
+Future<void> _dropExtraColumns({
   required Database db,
   required DBTable table,
   required List<Map<String, dynamic>> columns,
@@ -317,7 +725,7 @@ Future<void> dropExtraColumns({
   })) {
     TunaiDBInitializer.logger.logInit(
         '* -> Dropping Columns contain primary or foreign key, rebuilding table ${table.tableName}...');
-    await rebuildTable(db: db, table: table, columns: columns);
+    await _rebuildTable(db: db, table: table, columns: columns);
   } else if (droppingColumns.isNotEmpty) {
     List<Future> listFuture = [];
     for (Map<String, dynamic> column in droppingColumns) {
@@ -328,4 +736,37 @@ Future<void> dropExtraColumns({
     }
     await Future.wait(listFuture);
   }
+}
+
+Future<bool> _isSqliteVersionSupportUpsert(Database db) async {
+  try {
+    // Get SQLite version
+    var result = await db.rawQuery('SELECT sqlite_version()');
+    var sqliteVersion = result.first.values.first as String;
+
+    // Split the version number into major, minor, patch
+    var versionParts = sqliteVersion.split('.');
+    var major = int.parse(versionParts[0]);
+    var minor = int.parse(versionParts[1]);
+
+    // If the SQLite version is 3.24.0 or higher, use ON CONFLICT DO UPDATE
+    if (major > 3 || (major == 3 && minor >= 24)) {
+      return true;
+    } else {
+      return false;
+    }
+  } catch (e) {
+    TunaiDBInitializer.logger.logError(
+        '* TunaiDB failed to check if SQLite version supports upsert. $e');
+    return false;
+  }
+}
+
+/// Normalizes SQL statements for comparison by removing extra whitespace and newlines
+String _normalizeSQL(String sql) {
+  return sql
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .replaceAll(RegExp(r'[\n\r]'), ' ')
+      .trim()
+      .toLowerCase();
 }
