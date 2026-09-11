@@ -141,7 +141,9 @@ selected-table repairs never rebuild the database.
 Register your `DBTable`/`DBTrigger` declarations and await
 `TunaiDBInitializer().initDatabase(outletKey, updateDB: true)` before app queries.
 The updater automatically creates missing schema and reconciles supported
-existing-column changes while preserving retained rows. Full initialization removes
+existing-column changes while preserving retained rows. Type-changed ordinary
+columns use conversion, then a valid declared default or nullable NULL. Key
+columns remain strict. Full initialization removes
 tables, columns, indexes, triggers and views absent from the complete model. Ordinary
 changes do not require handwritten migrations. Unsafe transformations roll back first; full initialization can then recover
 with a logged, verified empty rebuild. Selected-table repair still propagates

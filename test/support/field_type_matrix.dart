@@ -156,16 +156,31 @@ void registerFieldTypeMatrix(
           'populated type cycle ${first.name}/${second.name}/${third.name}/${first.name}',
           () => _withDatabase((init) async {
                 await _open(init, _table(first));
-                await init.database
-                    .insert('items', {'id': 1, 'value': 'persistent 中文'});
+                await init.database.insert('items', {'id': 1, 'value': 7});
                 await init.database.insert('items', {'id': 2, 'value': null});
-                final rows = await _rows(init.database);
+                var expected = <Object?>[
+                  first == DBFieldType.text
+                      ? '7'
+                      : first == DBFieldType.real
+                          ? 7.0
+                          : 7,
+                  null
+                ];
                 for (final type in [second, third, first]) {
-                  final model =
-                      _table(type, value: _normalDefault(type), indexed: true);
+                  expected = expected
+                      .map((v) => type == DBFieldType.text
+                          ? (v ?? 7).toString()
+                          : type == DBFieldType.real
+                              ? 7.0
+                              : 7)
+                      .toList();
+                  final model = _table(type, value: 7, indexed: true);
                   expect(
                       await _open(init, model), DBInitializationResult.ready);
-                  expect(await _rows(init.database), rows);
+                  expect(await init.database.query('items', orderBy: 'id'), [
+                    {'id': 1, 'value': expected[0]},
+                    {'id': 2, 'value': expected[1]},
+                  ]);
                   await _verifySchema(init.database, model);
                   await _verifyReopen(init, model);
                 }
@@ -207,13 +222,11 @@ void registerFieldTypeMatrix(
                         value: _normalDefault(target),
                         required: required,
                         indexed: true);
-                    final losesValue = sample.value == null
-                        ? required
-                        : sample.value is String
-                            ? target != DBFieldType.text && sample.numericText
-                            : target == DBFieldType.text ||
-                                (target == DBFieldType.real &&
-                                    sample.losesRealPrecision);
+                    final losesValue =
+                        source == target && sample.value == null && required;
+                    final expectedValue = source == target
+                        ? before.first['value']
+                        : _convertedSample(sample, source, target);
                     if (losesValue) {
                       // Verify the failed preserving attempt is atomic BEFORE recovery.
                       final oldSql = await _schema(init.database);
@@ -242,7 +255,8 @@ void registerFieldTypeMatrix(
                       expect(
                           await init.database.query('items', orderBy: 'id'),
                           before
-                              .map((r) => {'id': r['id'], 'value': r['value']})
+                              .map((r) =>
+                                  {'id': r['id'], 'value': expectedValue})
                               .toList());
                       expect(await init.database.query('sentinel'), [
                         {'id': 99}
@@ -399,4 +413,37 @@ Future<void> _verifyReopen(TunaiDBInitializer init, DBTable model) async {
   expect(await _open(init, model), DBInitializationResult.ready);
   expect(await _rows(init.database), before);
   expect(await init.database.rawQuery('PRAGMA schema_version'), version);
+}
+
+Object _convertedSample(
+    _Sample sample, DBFieldType source, DBFieldType target) {
+  final value = sample.value;
+  if (value == null) return _normalDefault(target);
+  if (target == DBFieldType.text) {
+    return sample.label == 'negative-zero' ? '0.0' : value.toString();
+  }
+  if (value is String) {
+    return switch (sample.label) {
+      'leading-zero' || 'integer-text' || 'whitespace-number' => 7,
+      'exponent-text' => 1000,
+      'fraction-text' =>
+        target == DBFieldType.real ? -2.5 : _normalDefault(target),
+      'int64-text' => target == DBFieldType.integer
+          ? 9223372036854775807
+          : _normalDefault(target),
+      _ => _normalDefault(target),
+    };
+  }
+  if (target == DBFieldType.real) {
+    return sample.losesRealPrecision
+        ? _normalDefault(target)
+        : (value as num).toDouble();
+  }
+  final number = value as num;
+  if (number < -9223372036854775808.0 ||
+      number >= 9223372036854775808.0 ||
+      number.truncateToDouble() != number) {
+    return _normalDefault(target);
+  }
+  return number.toInt();
 }

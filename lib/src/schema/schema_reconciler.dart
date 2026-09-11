@@ -1,9 +1,12 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:sqflite/sqflite.dart';
 import 'package:synchronized/synchronized.dart';
 
 import '../model/db_table.dart';
 import '../model/db_trigger.dart';
 import 'schema_sql.dart';
+import 'stored_value_migration.dart';
 import '../model/db_initialization_result.dart';
 
 /// A physical legacy schema cannot be reconciled without losing data.
@@ -39,6 +42,7 @@ abstract final class SchemaReconciler {
       // protects connection-level PRAGMAs within this isolate.
       if (foreignKeys) await db.execute('PRAGMA foreign_keys = OFF');
       var result = DBInitializationResult.ready;
+      final migrations = <StoredValueMigration>[];
       try {
         await db.execute('PRAGMA legacy_alter_table = ON');
         Future<void> reconcile(Transaction tx) async {
@@ -49,7 +53,22 @@ abstract final class SchemaReconciler {
               selectedTables.length) {
             throw StateError('Duplicate registered table names');
           }
+          final protectedColumns = <String, Set<String>>{};
+          void protect(String table, String column) => protectedColumns
+              .putIfAbsent(table.toLowerCase(), () => <String>{})
+              .add(column.toLowerCase());
           if (completeRegistry) {
+            final existingTables =
+                await tx.query('sqlite_master', where: "type='table'");
+            for (final table in existingTables) {
+              for (final fk in await tx.rawQuery(
+                  'PRAGMA foreign_key_list(${quoteIdentifier(table['name']! as String)})')) {
+                protect(table['name']! as String, fk['from']! as String);
+                if (fk['to'] != null) {
+                  protect(fk['table']! as String, fk['to']! as String);
+                }
+              }
+            }
             for (final table in selectedTables) {
               if (table.fields.isEmpty ||
                   table.fields
@@ -61,6 +80,8 @@ abstract final class SchemaReconciler {
               }
               for (final field in table.foreignFields) {
                 final reference = field.reference!;
+                protect(table.tableName, field.fieldName);
+                protect(reference.table.tableName, reference.fieldName);
                 final parents = selectedTables
                     .where((t) => t.tableName == reference.table.tableName);
                 if (parents.isEmpty ||
@@ -81,7 +102,10 @@ abstract final class SchemaReconciler {
           for (final table in selectedTables) {
             await _updateTable(tx, table,
                 classifyCopyFailure: recoverIncompatibleSchema,
-                matchModel: completeRegistry);
+                matchModel: completeRegistry,
+                protectedColumns:
+                    protectedColumns[table.tableName.toLowerCase()] ?? const {},
+                migrations: migrations);
           }
           for (final trigger in selectedTriggers) {
             final existing = await tx.query(
@@ -144,6 +168,7 @@ abstract final class SchemaReconciler {
           } catch (failure) {
             if (!_canAttemptReplacement(failure)) rethrow;
             await tx.execute('ROLLBACK TO tunai_schema_update');
+            migrations.clear();
             logRecovery?.call(
               'schema_recovery: ${failure is SchemaIncompatibility ? failure.reason : 'legacy_schema_failure'}; rebuilding',
             );
@@ -175,6 +200,13 @@ abstract final class SchemaReconciler {
           }
           await tx.execute('RELEASE tunai_schema_update');
         }, exclusive: true);
+        for (final migration in migrations) {
+          if (migration.converted + migration.defaulted + migration.nulled >
+              0) {
+            logRecovery?.call(
+                'schema_migration: committed; converted=${migration.converted}; defaulted=${migration.defaulted}; nulled=${migration.nulled}');
+          }
+        }
         if (result == DBInitializationResult.rebuilt) {
           logRecovery?.call('schema_recovery: replacement_committed');
         }
@@ -257,7 +289,9 @@ abstract final class SchemaReconciler {
   }
 
   static Future<void> _matchTable(Transaction tx, DBTable table, String sql,
-      {required bool classifyCopyFailure}) async {
+      {required bool classifyCopyFailure,
+      required Set<String> protectedColumns,
+      required List<StoredValueMigration> migrations}) async {
     final current = TableDefinition(sql);
     final target = TableDefinition(table.createTableQuery);
     String signature(TableDefinition d) =>
@@ -284,7 +318,22 @@ abstract final class SchemaReconciler {
             reason: 'key_change');
       }
     }
+    final migration = StoredValueMigration({
+      for (final field in table.fields)
+        for (final column in columns)
+          if ((column['name']! as String).toLowerCase() ==
+                  field.fieldName.toLowerCase() &&
+              (column['type']! as String).toUpperCase() !=
+                  field.fieldType.query &&
+              column['pk'] == 0 &&
+              !field.isPrimaryKey &&
+              field.reference == null &&
+              !protectedColumns.contains(field.fieldName.toLowerCase()))
+            column['name']! as String: field,
+    });
+    migrations.add(migration);
     await _rebuild(tx, table.tableName, target, columns,
+        migration: migration,
         classifyCopyFailure: classifyCopyFailure,
         retainedColumns: retained,
         sourceWithoutRowid:
@@ -292,7 +341,10 @@ abstract final class SchemaReconciler {
   }
 
   static Future<void> _updateTable(Transaction tx, DBTable table,
-      {bool classifyCopyFailure = false, bool matchModel = false}) async {
+      {bool classifyCopyFailure = false,
+      bool matchModel = false,
+      Set<String> protectedColumns = const {},
+      List<StoredValueMigration>? migrations}) async {
     if (table.fields.isEmpty ||
         table.fields.map((f) => f.fieldName.toLowerCase()).toSet().length !=
             table.fields.length) {
@@ -310,7 +362,9 @@ abstract final class SchemaReconciler {
       await tx.execute(table.createTableQuery);
     } else if (matchModel) {
       await _matchTable(tx, table, existing.single['sql']! as String,
-          classifyCopyFailure: classifyCopyFailure);
+          classifyCopyFailure: classifyCopyFailure,
+          protectedColumns: protectedColumns,
+          migrations: migrations!);
     } else {
       final sql = existing.single['sql']! as String;
       final definition = TableDefinition(sql);
@@ -466,6 +520,7 @@ abstract final class SchemaReconciler {
     bool classifyCopyFailure = false,
     Set<String>? retainedColumns,
     bool sourceWithoutRowid = false,
+    StoredValueMigration? migration,
   }) async {
     var temp = '${name}__tunai_update';
     while ((await tx.query(
@@ -534,9 +589,99 @@ abstract final class SchemaReconciler {
     }
     await tx.execute(definition.create(temp));
     try {
-      await tx.execute(
-        'INSERT INTO $target ($fields) SELECT $fields FROM $source',
-      );
+      if (migration == null || migration.fields.isEmpty) {
+        await tx.execute(
+            'INSERT INTO $target ($fields) SELECT $fields FROM $source');
+      } else {
+        final key = rowid ??
+            columns.firstWhere((c) => (c['pk']! as int) > 0)['name']! as String;
+        final changed = writable.where(migration.fields.containsKey).toList();
+        final encoding = (await tx.rawQuery('PRAGMA encoding'))
+            .single
+            .values
+            .single as String;
+        final projections = <String>[
+          "CASE WHEN typeof(${quoteIdentifier(key)})='text' THEN CAST(${quoteIdentifier(key)} AS BLOB) ELSE ${quoteIdentifier(key)} END AS _tunai_key",
+          'typeof(${quoteIdentifier(key)}) AS _tunai_key_kind'
+        ];
+        for (var i = 0; i < changed.length; i++) {
+          final column = quoteIdentifier(changed[i]);
+          projections.add(
+              "CASE WHEN typeof($column)='text' THEN CAST($column AS BLOB) ELSE $column END AS _tunai_value$i");
+          projections.add('typeof($column) AS _tunai_kind$i');
+        }
+        final expressions = writable
+            .map((c) => migration.fields.containsKey(c)
+                ? (migration.fields[c]!.fieldType.query == 'TEXT'
+                    ? 'CAST(? AS TEXT)'
+                    : '?')
+                : quoteIdentifier(c))
+            .join(', ');
+        Object? cursor;
+        var cursorIsText = false;
+        while (true) {
+          final rows = await tx.query(name,
+              columns: projections,
+              orderBy: quoteIdentifier(key),
+              where: cursor == null
+                  ? null
+                  : '${quoteIdentifier(key)} > ${cursorIsText ? 'CAST(? AS TEXT)' : '?'}',
+              whereArgs: cursor == null ? null : [cursor],
+              limit: 256);
+          if (rows.isEmpty) break;
+          final batch = tx.batch();
+          for (final original in rows) {
+            final values = <String, Object?>{};
+            for (var i = 0; i < changed.length; i++) {
+              var value = original['_tunai_value$i'];
+              if (original['_tunai_kind$i'] == 'text' && value is List<int>) {
+                try {
+                  if (encoding == 'UTF-8') {
+                    value = utf8.decode(value);
+                  } else {
+                    final bytes =
+                        ByteData.sublistView(Uint8List.fromList(value));
+                    value = String.fromCharCodes([
+                      for (var j = 0; j < bytes.lengthInBytes; j += 2)
+                        bytes.getUint16(
+                            j,
+                            encoding == 'UTF-16le'
+                                ? Endian.little
+                                : Endian.big),
+                    ]);
+                  }
+                } on FormatException {
+                  // Malformed TEXT cannot be converted; use the normal fallback.
+                }
+              }
+              values[changed[i]] = value;
+            }
+            migration.apply(values);
+            // Unchanged values never cross the platform adapter or Dart codec.
+            batch.rawInsert(
+                "INSERT INTO $target ($fields) SELECT $expressions FROM $source WHERE ${quoteIdentifier(key)} = ${original['_tunai_key_kind'] == 'text' ? 'CAST(? AS TEXT)' : '?'}",
+                [
+                  ...changed.map((c) {
+                    final value = values[c];
+                    if (value is! String) return value;
+                    if (encoding == 'UTF-8') {
+                      return Uint8List.fromList(utf8.encode(value));
+                    }
+                    final bytes = ByteData(value.length * 2);
+                    for (var i = 0; i < value.length; i++) {
+                      bytes.setUint16(i * 2, value.codeUnitAt(i),
+                          encoding == 'UTF-16le' ? Endian.little : Endian.big);
+                    }
+                    return bytes.buffer.asUint8List();
+                  }),
+                  original['_tunai_key']
+                ]);
+          }
+          await batch.commit(noResult: true);
+          cursor = rows.last['_tunai_key'];
+          cursorIsText = rows.last['_tunai_key_kind'] == 'text';
+        }
+      }
     } on DatabaseException catch (error) {
       // SQLITE_CONSTRAINT only, and only while copying legacy rows. Syntax,
       // locking, storage and arbitrary driver failures must never erase data.
@@ -567,9 +712,12 @@ abstract final class SchemaReconciler {
     final join = keys
         .map((k) => 'a.${quoteIdentifier(k)} IS b.${quoteIdentifier(k)}')
         .join(' AND ');
-    final different = physicalNames.isEmpty
+    final unchanged = physicalNames
+        .where((c) => !(migration?.fields.containsKey(c) ?? false))
+        .toList();
+    final different = unchanged.isEmpty
         ? '0'
-        : physicalNames
+        : unchanged
             .map(
               (c) =>
                   '+a.${quoteIdentifier(c)} IS NOT +b.${quoteIdentifier(c)} COLLATE BINARY',

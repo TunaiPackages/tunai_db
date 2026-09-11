@@ -1,6 +1,6 @@
 # Field-type and default regression matrix
 
-The matrix covers every current `DBFieldType`: `integer`, `real`, and `text`.
+The current matrix includes best-effort ordinary-column migration. It covers every current `DBFieldType`: `integer`, `real`, and `text`.
 Tests are generated from `DBFieldType.values`; adding an enum member requires
 adding its value samples and default expectations.
 
@@ -43,12 +43,15 @@ nonnumeric strings stored in numeric-affinity columns.
 
 ## Interpretation
 
-SQLite column types specify affinity. A nonnumeric string can remain TEXT in an
-INTEGER/REAL column, and a fractional REAL can remain REAL in an INTEGER column.
-The updater preserves these values; it does not force a cast. Numeric text that
-would become a number, numbers that would become text, precision-losing numeric
-changes, and existing NULLs under a new NOT NULL constraint require recovery.
-Changing a default never backfills an existing NULL.
+For a type-changed ordinary column, numeric strings and numeric values are
+explicitly converted. Unconvertible values use the target default or nullable
+NULL; other columns and rows remain intact. Integer conversion never truncates
+fractions or overflows, and integer-to-REAL precision loss uses fallback. A stored
+NULL uses the default when the type changes. Default-only updates preserve NULL.
+Keys retain strict migration behavior, covered by the foreign-key matrix.
+
+The updated populated cases expect these explicit conversions and substitutions.
+The six type cycles exercise repeated numeric/text conversion and NULL backfill.
 
 ## Running
 
@@ -73,7 +76,7 @@ focused. The host matrix runs automatically with the package's full test suite.
 This is broad deterministic coverage, not every possible SQLite value, historical
 OS version, concurrent writer schedule or power-loss scenario.
 
-## Validation — 11 September 2026
+## Earlier strict-conversion validation — 11 September 2026
 
 - Full package suite: **421 passed**, including all 345 matrix cases.
 - iOS 26.4, iPad mini (A17 Pro): **345 passed**.

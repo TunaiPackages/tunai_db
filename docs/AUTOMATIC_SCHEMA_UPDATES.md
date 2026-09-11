@@ -13,8 +13,8 @@ The agreed recovery order is:
 1. Reconcile the registered schema while preserving existing data. Supported
    ordinary updates should succeed without application-written migrations.
 2. Roll back a failed update before deciding recovery. Use supported,
-   data-preserving reconciliation wherever possible; never guess lossy
-   conversions simply to force an update through.
+   row-preserving reconciliation and the explicit ordinary-column conversion
+   policy below; never guess key mappings or silently truncate numeric values.
 3. Only when a schema incompatibility cannot be reconciled safely, rebuild the
    affected database from its complete registered schema as a last resort. This
    replaces its contents with an empty database; other databases are unaffected.
@@ -123,7 +123,7 @@ Use full initialization to apply model removals.
 | New ordinary column | Add it, filling existing rows from its declared default or NULL. |
 | Existing column default | Rebuild the table with the new default, preserving all existing values, including NULLs. |
 | Nullability | Rebuild; tightening succeeds only when existing values satisfy NOT NULL. A default does not replace existing NULLs. |
-| Declared type | Rebuild only if copying to the new affinity preserves stored values. No casts or guessed conversions. |
+| Declared type | For ordinary columns, convert each value, then use a valid declared default or nullable NULL. Preserve every other column and row. Keys remain strict. |
 | Index enabled/disabled or conflicting definition | Create the declared nonunique index; drop obsolete/conflicting explicit indexes. |
 | Registered trigger body | Replace atomically, after tables exist. SQL string literals remain case-sensitive. |
 | Removed column | Copy retained values into the declared table, discarding the removed column. |
@@ -136,6 +136,34 @@ For a new NOT NULL column on a populated table, provide a meaningful non-null
 String defaults are actual escaped string literals, including nonempty values;
 finite numbers and booleans are supported. Arbitrary SQL expressions are not a
 `DBField.defaultValue` API.
+
+## Best-effort ordinary-column conversion
+
+During full initialization, an ordinary column whose declared type changes uses:
+
+1. Explicit conversion into the new type.
+2. Its declared default if conversion fails (including a stored NULL).
+3. NULL if no default exists and the target allows NULL.
+4. Failure/rollback if none is usable; the existing last-resort recovery policy applies.
+
+INTEGER conversion accepts whole, signed-64-bit values and decimal/scientific
+numeric strings. It does not truncate fractions or wrap overflow. REAL conversion
+accepts finite numeric values and decimal strings, rejects precision loss for whole
+integers, and rejects overflow/nonzero underflow. TEXT conversion uses numeric text
+representations and preserves existing strings. Unsupported values such as blobs
+use the fallback. Defaults are converted with the same rules; an unusable declared
+default raises an invalid-model error and preserves the original database.
+
+Only type-changed ordinary columns receive this treatment. A default-only change
+still leaves existing values alone. Tightening nullability without a type change
+still requires existing values to fit. Existing and target primary/foreign-key
+columns, including referenced columns, are excluded from substitution. Partial
+selected-table repair retains its strict, value-preserving behavior.
+
+Copies use bounded batches in the same transaction. Other column values, row
+identities, counts and relationships are validated before commit. Successful
+conversion logs counts of converted/defaulted/nulled values after commit, without
+logging row contents. Failed attempts never report successful substitution.
 
 ## How existing tables are rebuilt
 
@@ -154,7 +182,8 @@ All selected tables and registered triggers are reconciled in one SQLite
 transaction. Copy errors, incompatible data, schema verification failures,
 index conflicts, and integrity failures roll the transaction back. A retry
 starts from the original schema; temporary rebuild tables do not survive a
-failed transaction. No INSERT OR REPLACE/IGNORE or COALESCE is used to make bad data fit. Full
+failed transaction. No INSERT OR REPLACE/IGNORE is used to discard conflicting rows. Ordinary
+column substitutions follow the explicit policy above. Full
 initialization may then recover through the last-resort path described above.
 
 Following SQLite's [table rebuild procedure](https://www.sqlite.org/lang_altertable.html#making_other_kinds_of_table_schema_changes),
@@ -168,7 +197,7 @@ PRAGMAs must not be changed by other work during this operation.
 ## Boundaries: information the schema cannot supply
 
 The updater never guesses column renames, new row identities, foreign-key
-mappings, or lossy value conversions. Primary-key changes report a specific
+mappings or key-value substitutions. Primary-key changes report a specific
 incompatibility and roll back the data-preserving attempt. Full initialization
 can update constraints and foreign keys when retained data validates; partial
 repair continues to reject key/relationship and generated-column changes.
@@ -241,6 +270,9 @@ boundaries, rollback, recovery and reopening.
 
 The [foreign-key matrix](FOREIGN_KEY_MATRIX.md) covers 70 populated relationship
 changes with enforcement enabled and disabled, including post-upgrade writes.
+
+See [conversion validation](COLUMN_CONVERSION_VALIDATION.md) for populated,
+batched conversion, binary-safe copying and related native checks.
 
 ## Branch transition
 

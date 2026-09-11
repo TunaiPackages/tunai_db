@@ -6,8 +6,10 @@
   schema changes must not require handwritten application migrations.
 - Full initialization must match the complete registered model: remove undeclared
   tables, columns, indexes, triggers and views, preserving retained values.
-  Partial repairs preserve objects outside their selection; unsafe
-  conversions must roll back. Follow the goal and recovery contract in
+  Type-changed ordinary columns use explicit conversion, then a valid declared
+  default or nullable NULL; preserve other columns and all retained rows. Key
+  columns remain strict. Partial repairs preserve objects outside their selection;
+  unsupported conversions must roll back. Follow the goal and recovery contract in
   `docs/AUTOMATIC_SCHEMA_UPDATES.md`: a logged, explicitly reported rebuild to an
   empty database is the last resort for irreconcilable schema incompatibility,
   never routine recovery or a catch-all for storage errors. Only full
