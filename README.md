@@ -129,19 +129,42 @@ It is actually upsert, which will update the data on conflict
 
 ## Automatic schema updates
 
+TunaiDB owns local storage and schema updates; the consuming app owns how to
+populate empty data. Preserve data first. When a schema incompatibility cannot
+be migrated, full initialization first empties only affected tables and their
+transitive foreign-key dependents. Parents and unrelated tables retain data.
+It returns `DBInitializationResult.tablesRebuilt` and exposes the emptied names
+through `initializer.rebuiltTables`. Empty tables can change primary key without
+recovery. Only if scoped repair cannot recover a valid schema may initialization
+attempt a whole-database rebuild (`DBInitializationResult.rebuilt`).
+
+Recovery is logged and verified atomically. Storage errors and failed replacement
+still propagate with rollback; selected-table repairs never discard data.
+
 Register your `DBTable`/`DBTrigger` declarations and await
 `TunaiDBInitializer().initDatabase(outletKey, updateDB: true)` before app queries.
 The updater automatically creates missing schema and reconciles supported
-existing-column changes while preserving rows and unregistered schema. Ordinary
-changes do not require handwritten migrations. Unsafe transformations roll back
-instead of deleting data or silently continuing.
+existing-column changes while preserving retained rows. Type-changed ordinary
+columns use conversion, then a valid declared default or nullable NULL. Key
+columns remain strict. Full initialization removes
+tables, columns, indexes, triggers and views absent from the complete model. Ordinary
+changes do not require handwritten migrations. Unsafe transformations roll back first; full initialization can then recover
+with a logged, verified empty rebuild. Selected-table repair still propagates
+failures without discarding the database.
 
 See [Automatic schema updates](docs/AUTOMATIC_SCHEMA_UPDATES.md) for supported
 changes, default values, atomic rebuilds, concurrency, and intentional boundaries.
 
 ## Runnable regression lab
 
-The [Flutter Test Lab](example/TEST_LAB.md) runs 68 real-database scenarios with
+The [Flutter Test Lab](example/TEST_LAB.md) runs 69 real-database scenarios with
 category filters, crucial-feature checks and JSON reports. It shares its suite
 with automated host and native integration tests and keeps package defects
 visible as failures.
+
+The [field-type matrix](docs/FIELD_TYPE_MATRIX.md) adds 345 automated cases for
+all type transitions, default lifecycles, value boundaries and recovery, shared
+between the host and native test runners.
+
+The [foreign-key matrix](docs/FOREIGN_KEY_MATRIX.md) adds 70 populated-database
+cases for relationship changes, integrity, rollback and last-resort recovery.

@@ -1,0 +1,188 @@
+{
+  "date": "2026-09-11",
+  "suite": "example/integration_test/database_integration_test.dart",
+  "databaseScenariosPerRun": 68,
+  "expandedRecoveryTestPerRun": true,
+  "results": [
+    {
+      "platform": "iOS",
+      "runtime": "26.4",
+      "configuration": "iPhone 17 Pro",
+      "status": "passed"
+    },
+    {
+      "platform": "iOS",
+      "runtime": "26.4",
+      "configuration": "iPhone 17 Pro Max",
+      "status": "passed"
+    },
+    {
+      "platform": "iOS",
+      "runtime": "26.4",
+      "configuration": "iPhone 17e",
+      "status": "passed"
+    },
+    {
+      "platform": "iOS",
+      "runtime": "26.4",
+      "configuration": "iPhone 17",
+      "status": "passed"
+    },
+    {
+      "platform": "iOS",
+      "runtime": "26.4",
+      "configuration": "iPad Pro 13-inch (M5)",
+      "status": "passed"
+    },
+    {
+      "platform": "iOS",
+      "runtime": "26.4",
+      "configuration": "iPad Pro 11-inch (M5)",
+      "status": "passed"
+    },
+    {
+      "platform": "iOS",
+      "runtime": "26.4",
+      "configuration": "iPad mini (A17 Pro)",
+      "status": "passed"
+    },
+    {
+      "platform": "iOS",
+      "runtime": "26.4",
+      "configuration": "iPad Air 11-inch (M4)",
+      "status": "passed"
+    },
+    {
+      "platform": "iOS",
+      "runtime": "26.4",
+      "configuration": "iPad Air 13-inch (M4)",
+      "status": "passed"
+    },
+    {
+      "platform": "iOS",
+      "runtime": "26.5",
+      "configuration": "iPhone 17e",
+      "status": "passed"
+    },
+    {
+      "platform": "iOS",
+      "runtime": "26.5",
+      "configuration": "iPhone 17 Pro Max",
+      "status": "passed"
+    },
+    {
+      "platform": "iOS",
+      "runtime": "26.5",
+      "configuration": "iPhone Air",
+      "status": "passed"
+    },
+    {
+      "platform": "iOS",
+      "runtime": "26.5",
+      "configuration": "iPhone 17",
+      "status": "passed"
+    },
+    {
+      "platform": "iOS",
+      "runtime": "26.5",
+      "configuration": "iPad Pro 13-inch (M5)",
+      "status": "passed"
+    },
+    {
+      "platform": "iOS",
+      "runtime": "26.5",
+      "configuration": "iPad Pro 11-inch (M5)",
+      "status": "passed"
+    },
+    {
+      "platform": "iOS",
+      "runtime": "26.5",
+      "configuration": "iPad mini (A17 Pro)",
+      "status": "passed"
+    },
+    {
+      "platform": "iOS",
+      "runtime": "26.5",
+      "configuration": "iPad Air 13-inch (M4)",
+      "status": "passed"
+    },
+    {
+      "platform": "iOS",
+      "runtime": "26.5",
+      "configuration": "iPad (A16)",
+      "status": "passed"
+    },
+    {
+      "platform": "iOS",
+      "runtime": "26.5",
+      "configuration": "iPad Air 11-inch (M4)",
+      "status": "passed"
+    },
+    {
+      "platform": "iOS",
+      "runtime": "26.2",
+      "configuration": "iPhone 17 Pro Max",
+      "status": "passed"
+    },
+    {
+      "platform": "iOS",
+      "runtime": "26.2",
+      "configuration": "iPhone 17",
+      "status": "passed"
+    },
+    {
+      "platform": "iOS",
+      "runtime": "26.2",
+      "configuration": "iPhone 16e",
+      "status": "passed"
+    },
+    {
+      "platform": "iOS",
+      "runtime": "26.2",
+      "configuration": "iPad Pro 13-inch (M5)",
+      "status": "passed"
+    },
+    {
+      "platform": "iOS",
+      "runtime": "26.2",
+      "configuration": "iPad mini (A17 Pro)",
+      "status": "passed"
+    },
+    {
+      "platform": "iOS",
+      "runtime": "26.2",
+      "configuration": "iPad Pro 11-inch (M5)",
+      "status": "passed"
+    },
+    {
+      "platform": "iOS",
+      "runtime": "26.2",
+      "configuration": "iPad Air 11-inch (M3)",
+      "status": "passed"
+    },
+    {
+      "platform": "iOS",
+      "runtime": "26.2",
+      "configuration": "iPad Air 13-inch (M3)",
+      "status": "passed"
+    },
+    {
+      "platform": "Android",
+      "runtime": "API 36",
+      "configuration": "Pixel_6a",
+      "status": "passed"
+    },
+    {
+      "platform": "Android",
+      "runtime": "API 36.1 system image",
+      "configuration": "Medium_Phone_API_36.1",
+      "status": "passed"
+    },
+    {
+      "platform": "macOS",
+      "runtime": "26.4.1",
+      "configuration": "native desktop",
+      "status": "passed"
+    }
+  ]
+}
