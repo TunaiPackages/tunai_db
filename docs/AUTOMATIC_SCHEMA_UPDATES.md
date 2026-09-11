@@ -280,3 +280,6 @@ Historically Tunaipos pinned the production branch. Main contained an older API.
 This change incorporates production's existing API into main, then fixes its
 updater. Consumers must pin the tested main commit, not a moving branch.
 The production branch itself is not advanced by this change.
+
+See [SQLite compatibility](SQLITE_COMPATIBILITY.md) for historical-engine tests,
+column-inspection fallbacks and mixed-type foreign-key limitations.

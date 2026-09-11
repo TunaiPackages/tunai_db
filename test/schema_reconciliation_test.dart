@@ -305,12 +305,11 @@ void main() {
     await db.execute('CREATE TABLE child(parent INTEGER REFERENCES items(id))');
     await db.execute('INSERT INTO child VALUES(42)');
     await db.execute('PRAGMA foreign_keys=ON');
+    final legacyAlter = await db.rawQuery('PRAGMA legacy_alter_table');
     await expectLater(update(schema()), throwsA(isA<StateError>()));
     expect(await defaultValue(), isNull);
     expect(Sqflite.firstIntValue(await db.rawQuery('PRAGMA foreign_keys')), 1);
-    expect(
-        Sqflite.firstIntValue(await db.rawQuery('PRAGMA legacy_alter_table')),
-        0);
+    expect(await db.rawQuery('PRAGMA legacy_alter_table'), legacyAlter);
   });
 
   test('preserves AUTOINCREMENT high-water mark after deleting highest row',

@@ -288,6 +288,21 @@ abstract final class SchemaReconciler {
     }
   }
 
+  // Unknown PRAGMAs return no rows on older SQLite (including Android).
+  // table_xinfo arrived in 3.26.0; table_info covers ordinary columns there.
+  // Keep xinfo on newer engines so generated/hidden columns remain visible.
+  static Future<List<Map<String, Object?>>> _tableColumns(
+      Transaction tx, String name) async {
+    final columns =
+        await tx.rawQuery('PRAGMA table_xinfo(${quoteIdentifier(name)})');
+    if (columns.isNotEmpty) return columns;
+    return [
+      for (final column
+          in await tx.rawQuery('PRAGMA table_info(${quoteIdentifier(name)})'))
+        {...column, 'hidden': 0},
+    ];
+  }
+
   static Future<void> _matchTable(Transaction tx, DBTable table, String sql,
       {required bool classifyCopyFailure,
       required Set<String> protectedColumns,
@@ -297,8 +312,7 @@ abstract final class SchemaReconciler {
     String signature(TableDefinition d) =>
         normalizeTriggerSql('${d.parts.join(',')} ${d.suffix}');
     if (signature(current) == signature(target)) return;
-    final columns = await tx
-        .rawQuery('PRAGMA table_xinfo(${quoteIdentifier(table.tableName)})');
+    final columns = await _tableColumns(tx, table.tableName);
     final retained = table.fields.map((f) => f.fieldName.toLowerCase()).toSet();
     for (final field in table.fields.where((f) => f.isPrimaryKey)) {
       final old = columns.where((c) =>
@@ -368,9 +382,7 @@ abstract final class SchemaReconciler {
     } else {
       final sql = existing.single['sql']! as String;
       final definition = TableDefinition(sql);
-      final columns = await tx.rawQuery(
-        'PRAGMA table_xinfo(${quoteIdentifier(table.tableName)})',
-      );
+      final columns = await _tableColumns(tx, table.tableName);
       final byName = {for (final c in columns) c['name'] as String: c};
       final foreignKeys = await tx.rawQuery(
         'PRAGMA foreign_key_list(${quoteIdentifier(table.tableName)})',
@@ -468,9 +480,7 @@ abstract final class SchemaReconciler {
         }
       }
     }
-    final actualColumns = await tx.rawQuery(
-      'PRAGMA table_xinfo(${quoteIdentifier(table.tableName)})',
-    );
+    final actualColumns = await _tableColumns(tx, table.tableName);
     for (final field in table.fields) {
       final column = actualColumns.singleWhere(
         (c) => c['name'] == field.fieldName,

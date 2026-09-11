@@ -21,6 +21,8 @@
   rebuild as an exceptional event to investigate and improve the updater.
 - Keep schema reconciliation centralized in `lib/src/schema/`. Initialization
   and explicit `updateTables` must share the same behavior.
+- For SQLite schema/introspection changes, consult `docs/SQLITE_COMPATIBILITY.md`
+  and run the historical-engine matrix alongside current-engine tests.
 - Add focused, populated-database regression tests for persistence changes.
   Run `flutter test` and `flutter analyze`; report legacy lint findings honestly.
 - Preserve unrelated work and generated Flutter/plugin churn. Commits use

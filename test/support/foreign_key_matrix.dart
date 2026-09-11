@@ -371,23 +371,35 @@ Future<void> _run(_Case scenario, bool enforce) async {
             await init.database.insert(parent.tableName,
                 {for (final field in parent.fields) field.fieldName: 9001});
             Object parentKey = 9001;
+            num childKey = 9001;
             final parentField = parent.fields
                 .singleWhere((f) => f.fieldName == reference.fieldName);
             if (parentField.fieldType == DBFieldType.text &&
                 table.foreignFields.single.fieldType == DBFieldType.real) {
-              // FK comparison uses the parent's TEXT affinity: "9001" and
-              // the REAL value's text representation "9001.0" differ.
-              await expectLater(
-                  init.database
-                      .insert(table.tableName, {'id': 9000, 'parentId': 9001}),
-                  throwsA(isA<DatabaseException>()));
-              parentKey = '9001.0';
+              // Older SQLite releases stringify whole REAL keys differently.
+              // A fractional key gives a stable relationship on both engines.
+              parentKey = '9001.5';
+              childKey = 9001.5;
               await init.database.update(
                   parent.tableName, {reference.fieldName: parentKey},
                   where: '${reference.fieldName}=?', whereArgs: [9001]);
             }
+            if (parentField.fieldType == DBFieldType.integer &&
+                table.foreignFields.single.fieldType == DBFieldType.real &&
+                !await _freshIntegerRealReferenceAccepts(init.database)) {
+              // Some upstream engines reject this on an unmigrated schema too.
+              // Require matching behavior; never relax foreign-key enforcement.
+              await expectLater(
+                  init.database.insert(
+                      table.tableName, {'id': 9000, 'parentId': childKey}),
+                  throwsA(isA<DatabaseException>().having(
+                      (e) => e.toString(),
+                      'constraint',
+                      contains('FOREIGN KEY constraint failed'))));
+              continue;
+            }
             await init.database
-                .insert(table.tableName, {'id': 9000, 'parentId': 9001});
+                .insert(table.tableName, {'id': 9000, 'parentId': childKey});
             await expectLater(
                 init.database.delete(parent.tableName,
                     where: '${reference.fieldName}=?', whereArgs: [parentKey]),
@@ -427,4 +439,20 @@ Future<Map<String, Object?>> _snapshot(Database db) async {
         await db.query(table['name']! as String, orderBy: 'id');
   }
   return {'schema': schema, 'rows': rows};
+}
+
+// Called inside the probe savepoint, so these fresh baseline tables roll back.
+Future<bool> _freshIntegerRealReferenceAccepts(Database db) async {
+  await db
+      .execute('CREATE TABLE probe_parent(id INTEGER PRIMARY KEY NOT NULL)');
+  await db.execute(
+      'CREATE TABLE probe_child(parentId REAL REFERENCES probe_parent(id))');
+  await db.execute('INSERT INTO probe_parent VALUES(9001)');
+  try {
+    await db.execute('INSERT INTO probe_child VALUES(9001)');
+    return true;
+  } on DatabaseException catch (error) {
+    expect(error.toString(), contains('FOREIGN KEY constraint failed'));
+    return false;
+  }
 }
