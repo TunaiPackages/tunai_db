@@ -4,16 +4,25 @@ import 'package:synchronized/synchronized.dart';
 import '../model/db_table.dart';
 import '../model/db_trigger.dart';
 import 'schema_sql.dart';
+import '../model/db_initialization_result.dart';
+
+/// A physical legacy schema cannot be reconciled without losing data.
+class SchemaIncompatibility extends StateError {
+  SchemaIncompatibility(super.message, {required this.reason});
+  final String reason;
+}
 
 /// Automatic, data-preserving reconciliation of the registered schema.
 /// Call outside transactions, before exposing this connection to app workers.
 abstract final class SchemaReconciler {
   static final _lock = Lock();
 
-  static Future<void> update(
+  static Future<DBInitializationResult> update(
     Database db,
     List<DBTable> tables, {
     List<DBTrigger> triggers = const [],
+    bool recoverIncompatibleSchema = false,
+    void Function(String)? logRecovery,
   }) {
     final selectedTables = List<DBTable>.of(tables);
     final selectedTriggers = List<DBTrigger>.of(triggers);
@@ -28,9 +37,10 @@ abstract final class SchemaReconciler {
       // serializes schema writers across handles/processes; this lock also
       // protects connection-level PRAGMAs within this isolate.
       if (foreignKeys) await db.execute('PRAGMA foreign_keys = OFF');
+      var result = DBInitializationResult.ready;
       try {
         await db.execute('PRAGMA legacy_alter_table = ON');
-        await db.transaction((tx) async {
+        Future<void> reconcile(Transaction tx) async {
           if (selectedTables
                   .map((t) => t.tableName.toLowerCase())
                   .toSet()
@@ -39,7 +49,8 @@ abstract final class SchemaReconciler {
             throw StateError('Duplicate registered table names');
           }
           for (final table in selectedTables) {
-            await _updateTable(tx, table);
+            await _updateTable(tx, table,
+                classifyCopyFailure: recoverIncompatibleSchema);
           }
           for (final trigger in selectedTriggers) {
             final existing = await tx.query(
@@ -61,23 +72,113 @@ abstract final class SchemaReconciler {
           }
           if (foreignKeys &&
               (await tx.rawQuery('PRAGMA foreign_key_check')).isNotEmpty) {
-            throw StateError(
+            throw SchemaIncompatibility(
               'Automatic schema update would leave foreign-key violations',
+              reason: 'foreign_key_violation',
             );
           }
+        }
+
+        await db.transaction((tx) async {
+          if (!recoverIncompatibleSchema) {
+            await reconcile(tx);
+            return;
+          }
+          // Reject invalid declarations before considering legacy recovery.
+          if (selectedTables
+                      .map((t) => t.tableName.toLowerCase())
+                      .toSet()
+                      .length !=
+                  selectedTables.length ||
+              selectedTables.any((t) =>
+                  t.fields.isEmpty ||
+                  t.fields
+                          .map((f) => f.fieldName.toLowerCase())
+                          .toSet()
+                          .length !=
+                      t.fields.length) ||
+              selectedTriggers
+                      .map((t) => t.name.toLowerCase())
+                      .toSet()
+                      .length !=
+                  selectedTriggers.length) {
+            throw ArgumentError(
+                'Invalid or duplicate registered schema declarations');
+          }
+          // Keep the writer lock across rollback and replacement. No other
+          // handle can insert data between deciding recovery and rebuilding.
+          await tx.execute('SAVEPOINT tunai_schema_update');
+          try {
+            await reconcile(tx);
+          } catch (failure) {
+            if (!_canAttemptReplacement(failure)) rethrow;
+            await tx.execute('ROLLBACK TO tunai_schema_update');
+            logRecovery?.call(
+              'schema_recovery: ${failure is SchemaIncompatibility ? failure.reason : 'legacy_schema_failure'}; rebuilding',
+            );
+            // Replacement stays in this transaction: invalid declarations or
+            // storage failure restore the entire original database.
+            final objects = await tx.query(
+              'sqlite_master',
+              columns: ['type', 'name'],
+              where: "type IN ('trigger', 'view', 'table')",
+            );
+            for (final type in ['trigger', 'view', 'table']) {
+              for (final object in objects.where((o) => o['type'] == type)) {
+                final name = object['name']! as String;
+                if (name.startsWith('sqlite_')) continue;
+                await tx.execute(
+                  'DROP ${type.toUpperCase()} IF EXISTS ${quoteIdentifier(name)}',
+                );
+              }
+            }
+            await reconcile(tx);
+            if ((await tx.rawQuery(
+                  'PRAGMA quick_check',
+                ))
+                    .any((r) => r.values.single != 'ok') ||
+                (await tx.rawQuery('PRAGMA foreign_key_check')).isNotEmpty) {
+              throw StateError('Replacement schema verification failed');
+            }
+            result = DBInitializationResult.rebuilt;
+          }
+          await tx.execute('RELEASE tunai_schema_update');
         }, exclusive: true);
+        if (result == DBInitializationResult.rebuilt) {
+          logRecovery?.call('schema_recovery: replacement_committed');
+        }
       } finally {
         try {
           await db.execute(
-              'PRAGMA legacy_alter_table = ${legacyAlter ? 'ON' : 'OFF'}');
+            'PRAGMA legacy_alter_table = ${legacyAlter ? 'ON' : 'OFF'}',
+          );
         } finally {
           if (foreignKeys) await db.execute('PRAGMA foreign_keys = ON');
         }
       }
+      if (result == DBInitializationResult.rebuilt) {
+        logRecovery?.call('schema_recovery: rebuilt_empty_database');
+      }
+      return result;
     });
   }
 
-  static Future<void> _updateTable(Transaction tx, DBTable table) async {
+  // Classify the failure of reconciliation, not opening/commit/PRAGMA cleanup.
+  // SQLite ERROR covers legacy SQL shapes (e.g. a view occupying a table name).
+  // The replacement must still validate and commit, otherwise all data remains.
+  static bool _canAttemptReplacement(Object failure) {
+    if (failure is DatabaseException) {
+      final code = failure.getResultCode();
+      return code != null && const {1, 17, 19, 20}.contains(code & 0xff);
+    }
+    return failure is StateError ||
+        failure is FormatException ||
+        failure is RangeError ||
+        failure is UnsupportedError;
+  }
+
+  static Future<void> _updateTable(Transaction tx, DBTable table,
+      {bool classifyCopyFailure = false}) async {
     if (table.fields.isEmpty ||
         table.fields.map((f) => f.fieldName.toLowerCase()).toSet().length !=
             table.fields.length) {
@@ -109,8 +210,9 @@ abstract final class SchemaReconciler {
         final column = byName[field.fieldName];
         if (column == null) {
           if (field.isPrimaryKey || field.reference != null) {
-            throw StateError(
+            throw SchemaIncompatibility(
               'Cannot infer identity or relationship for new key ${table.tableName}.${field.fieldName}',
+              reason: 'new_key',
             );
           }
           missing.add(field.fieldQuery);
@@ -148,8 +250,9 @@ abstract final class SchemaReconciler {
         if (column['pk'] != (field.isPrimaryKey ? 1 : 0) ||
             !referenceMatches ||
             autoIncrement != field.isAutoIncrement) {
-          throw StateError(
+          throw SchemaIncompatibility(
             'Cannot infer a key change for ${table.tableName}.${field.fieldName}; existing data was preserved',
+            reason: 'key_change',
           );
         }
         final typeChanged =
@@ -159,8 +262,9 @@ abstract final class SchemaReconciler {
             normalizeDefault(field.defaultSql);
         if (!typeChanged && !nullChanged && !defaultChanged) continue;
         if (column['hidden'] != 0) {
-          throw StateError(
+          throw SchemaIncompatibility(
             'Cannot rewrite generated column ${table.tableName}.${field.fieldName}',
+            reason: 'generated_column',
           );
         }
         definition.parts[partIndex] = rewriteColumn(
@@ -183,7 +287,8 @@ abstract final class SchemaReconciler {
           constraint < 0 ? definition.parts.length : constraint,
           missing,
         );
-        await _rebuild(tx, table.tableName, definition, columns);
+        await _rebuild(tx, table.tableName, definition, columns,
+            classifyCopyFailure: classifyCopyFailure);
       } else {
         for (final fieldSql in missing) {
           await tx.execute(
@@ -192,18 +297,21 @@ abstract final class SchemaReconciler {
         }
       }
     }
-    final actualColumns = await tx
-        .rawQuery('PRAGMA table_xinfo(${quoteIdentifier(table.tableName)})');
+    final actualColumns = await tx.rawQuery(
+      'PRAGMA table_xinfo(${quoteIdentifier(table.tableName)})',
+    );
     for (final field in table.fields) {
-      final column =
-          actualColumns.singleWhere((c) => c['name'] == field.fieldName);
+      final column = actualColumns.singleWhere(
+        (c) => c['name'] == field.fieldName,
+      );
       if ((column['type']! as String).toUpperCase() != field.fieldType.query ||
           column['notnull'] != (field.isNotNull ? 1 : 0) ||
           column['pk'] != (field.isPrimaryKey ? 1 : 0) ||
           normalizeDefault(column['dflt_value']) !=
               normalizeDefault(field.defaultSql)) {
         throw StateError(
-            'Automatic schema update could not reconcile ${table.tableName}.${field.fieldName}');
+          'Automatic schema update could not reconcile ${table.tableName}.${field.fieldName}',
+        );
       }
     }
     for (final field in table.indexingFields) {
@@ -220,7 +328,10 @@ abstract final class SchemaReconciler {
         if (existing.single['tbl_name'] != table.tableName ||
             columns.length != 1 ||
             columns.single['name'] != field.fieldName) {
-          throw StateError('Index $name conflicts with the registered schema');
+          throw SchemaIncompatibility(
+            'Index $name conflicts with the registered schema',
+            reason: 'index_conflict',
+          );
         }
         continue;
       }
@@ -234,8 +345,9 @@ abstract final class SchemaReconciler {
     Transaction tx,
     String name,
     TableDefinition definition,
-    List<Map<String, Object?>> columns,
-  ) async {
+    List<Map<String, Object?>> columns, {
+    bool classifyCopyFailure = false,
+  }) async {
     var temp = '${name}__tunai_update';
     while ((await tx.query(
       'sqlite_master',
@@ -269,7 +381,10 @@ abstract final class SchemaReconciler {
         }
       }
       if (rowid == null) {
-        throw StateError('Cannot preserve hidden row identity for $name');
+        throw SchemaIncompatibility(
+          'Cannot preserve hidden row identity for $name',
+          reason: 'row_identity',
+        );
       }
       writable.insert(0, rowid);
     }
@@ -291,9 +406,25 @@ abstract final class SchemaReconciler {
       if (rows.isNotEmpty) sequence = rows.single['seq'] as int?;
     }
     await tx.execute(definition.create(temp));
-    await tx.execute(
-      'INSERT INTO $target ($fields) SELECT $fields FROM $source',
-    );
+    try {
+      await tx.execute(
+        'INSERT INTO $target ($fields) SELECT $fields FROM $source',
+      );
+    } on DatabaseException catch (error) {
+      // SQLITE_CONSTRAINT only, and only while copying legacy rows. Syntax,
+      // locking, storage and arbitrary driver failures must never erase data.
+      if (!classifyCopyFailure) rethrow;
+      final code = error.getResultCode();
+      if ((code != null && (code & 0xff) == 19) ||
+          error.isNotNullConstraintError() ||
+          error.isUniqueConstraintError()) {
+        throw SchemaIncompatibility(
+          'Existing rows violate the target constraints',
+          reason: 'stored_constraint_violation',
+        );
+      }
+      rethrow;
+    }
     final oldCount = Sqflite.firstIntValue(
       await tx.rawQuery('SELECT count(*) FROM $source'),
     );
@@ -320,8 +451,9 @@ abstract final class SchemaReconciler {
           'SELECT 1 FROM $source a LEFT JOIN $target b ON $join WHERE b.${quoteIdentifier(keys.first)} IS NULL OR ($different) LIMIT 1',
         ))
             .isNotEmpty) {
-      throw StateError(
+      throw SchemaIncompatibility(
         'Automatic schema update would change stored values in $name',
+        reason: 'value_conversion',
       );
     }
     await tx.execute('DROP TABLE $source');

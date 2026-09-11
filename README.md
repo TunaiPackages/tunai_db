@@ -129,12 +129,22 @@ It is actually upsert, which will update the data on conflict
 
 ## Automatic schema updates
 
+TunaiDB owns local storage and schema updates; the consuming app owns how to
+populate empty data. Preserve data first. The agreed recovery contract permits
+recreating an empty database only as a last resort when safe schema
+reconciliation is impossible, with logging and an explicit rebuilt outcome for
+the app. Rebuilds should be rare and investigated, not routine upgrade behavior.
+Full initialization returns `DBInitializationResult.rebuilt` after successful
+last-resort recovery. Storage errors and failed replacement still propagate;
+selected-table repairs never rebuild the database.
+
 Register your `DBTable`/`DBTrigger` declarations and await
 `TunaiDBInitializer().initDatabase(outletKey, updateDB: true)` before app queries.
 The updater automatically creates missing schema and reconciles supported
 existing-column changes while preserving rows and unregistered schema. Ordinary
-changes do not require handwritten migrations. Unsafe transformations roll back
-instead of deleting data or silently continuing.
+changes do not require handwritten migrations. Unsafe transformations roll back first; full initialization can then recover
+with a logged, verified empty rebuild. Selected-table repair still propagates
+failures without discarding the database.
 
 See [Automatic schema updates](docs/AUTOMATIC_SCHEMA_UPDATES.md) for supported
 changes, default values, atomic rebuilds, concurrency, and intentional boundaries.

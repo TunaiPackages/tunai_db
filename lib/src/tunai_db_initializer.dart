@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'package:synchronized/synchronized.dart';
+import 'model/db_initialization_result.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart' as path_provider;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -52,10 +54,13 @@ class TunaiDBInitializer {
 
   Database? _database;
 
-  bool get hasInit => _database != null;
+  final _initializationLock = Lock();
+  bool _preparing = false;
+
+  bool get hasInit => !_preparing && (_database?.isOpen ?? false);
   Database get database {
-    if (_database == null) {
-      throw Exception('Tunai Database is not initialized');
+    if (!hasInit) {
+      throw StateError('Tunai Database is not initialized');
     }
     return _database!;
   }
@@ -64,36 +69,70 @@ class TunaiDBInitializer {
     _database = database;
   }
 
-  Future<void> initDatabase(
+  /// Reconciles first, then rebuilds empty schema only for known incompatibility.
+  /// Call with the complete registry and quiesce all database users first.
+  /// Selected-table updateTables calls never rebuild the whole database.
+  Future<DBInitializationResult> initDatabase(
     String uniqueKey, {
     bool resetDB = false,
     bool updateDB = true,
     bool? readOnly = false,
     bool? singleInstance = true,
-  }) async {
+  }) =>
+      _initializationLock.synchronized(() async {
+        _preparing = true;
+        final tables = List<DBTable>.of(_allTables);
+        final triggers = List<DBTrigger>.of(_allTriggers);
+        try {
+          await close();
+          await _initDB(
+            uniqueKey,
+            tables: tables,
+            resetDB: resetDB,
+            readOnly: readOnly,
+            singleInstance: singleInstance,
+          );
+          var result = DBInitializationResult.ready;
+          if (updateDB) {
+            result = await SchemaReconciler.update(
+              _database!,
+              tables,
+              triggers: triggers,
+              recoverIncompatibleSchema: readOnly != true && tables.isNotEmpty,
+              logRecovery: _logRecovery,
+            );
+          }
+          _isSupportUpsert = await _isSqliteVersionSupportUpsert(_database!);
+          return resetDB ? DBInitializationResult.reset : result;
+        } catch (error, stack) {
+          _logRecovery(
+            'schema_initialization: failed; category=${error.runtimeType}',
+          );
+          try {
+            await close();
+          } catch (_) {
+            _logRecovery('schema_initialization: close_failed');
+          }
+          Error.throwWithStackTrace(error, stack);
+        } finally {
+          _preparing = false;
+        }
+      });
+
+  void _logRecovery(String event) {
+    // A diagnostic sink must not turn committed recovery into another failure.
     try {
-      await _initDB(
-        uniqueKey,
-        resetDB: resetDB,
-        readOnly: readOnly,
-        singleInstance: singleInstance,
-      );
-      if (updateDB) {
-        await SchemaReconciler.update(
-          _database!,
-          _allTables,
-          triggers: _allTriggers,
-        );
-      }
-      _isSupportUpsert = await _isSqliteVersionSupportUpsert(database);
-    } catch (e) {
-      _logger.logInit('TunaiDB Failed to initialize. $e');
-      rethrow;
+      _logger.logInit(event);
+    } catch (_) {
+      // The initialization result remains authoritative if logging is unavailable.
     }
   }
 
   Future<void> close() async {
-    return _database?.close();
+    final database = _database;
+    _database = null;
+    _isSupportUpsert = false;
+    await database?.close();
   }
 
   /// Manually synchronize triggers with the database
@@ -180,6 +219,7 @@ class TunaiDBInitializer {
 
   Future<void> _initDB(
     String uniqueKey, {
+    required List<DBTable> tables,
     bool resetDB = false,
     bool? readOnly = false,
     bool? singleInstance = true,
@@ -211,20 +251,14 @@ class TunaiDBInitializer {
 
       if (!databaseExist) {
         try {
-          await Directory(path).create(recursive: true);
+          await Directory(p.dirname(path)).create(recursive: true);
           _logger.logInit('* Created directory at $path');
         } catch (e) {
           _logger.logError('Failed to create directory at path : $path, $e');
           rethrow;
         }
-
-        await deleteDatabase(path).catchError((e) {
-          _logger.logError('Failed to delete database at path : $path, $e');
-        });
       } else if (resetDB) {
-        await deleteDatabase(path).catchError((e) {
-          _logger.logError('Failed to delete database at path : $path, $e');
-        });
+        await deleteDatabase(path);
       }
 
       if (useFFI) {
@@ -232,7 +266,7 @@ class TunaiDBInitializer {
           path,
           options: OpenDatabaseOptions(
             version: 1,
-            onCreate: _onCreate,
+            onCreate: (db, version) => _onCreate(db, version, tables),
             onConfigure: _onConfigure,
             readOnly: readOnly,
             singleInstance: singleInstance,
@@ -242,14 +276,14 @@ class TunaiDBInitializer {
         _database = await openDatabase(
           path,
           version: 1,
-          onCreate: _onCreate,
+          onCreate: (db, version) => _onCreate(db, version, tables),
           onConfigure: _onConfigure,
           readOnly: readOnly,
           singleInstance: singleInstance,
         );
       }
 
-      final result = await database.rawQuery('SELECT sqlite_version();');
+      final result = await _database!.rawQuery('SELECT sqlite_version();');
       final sqliteVersion = result.first.values.first;
       _logger.logInit(
         '* TunaiDB successfully open database ($dbName) version : $sqliteVersion\npath: $_database\n',
@@ -301,9 +335,9 @@ class TunaiDBInitializer {
     }
   }
 
-  Future<void> _onCreate(Database db, int version) async {
+  Future<void> _onCreate(Database db, int version, List<DBTable> tables) async {
     try {
-      for (var table in _allTables) {
+      for (var table in tables) {
         _logger.logInit(
           '* TunaiDB creating table...\n${table.createTableQuery}\n',
         );

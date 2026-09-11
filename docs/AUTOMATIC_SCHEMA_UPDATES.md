@@ -1,5 +1,107 @@
 # Automatic schema updates
 
+## Goal and recovery contract
+
+TunaiDB owns reliable local storage and schema updates. Its priority is to keep
+stored data usable across updates and preserve existing data wherever it can.
+It is independent of any consuming app's business rules, login, upload queues,
+network synchronization, or source of truth. The app decides how to populate an
+empty database; TunaiDB does not download or reconstruct business data.
+
+The agreed recovery order is:
+
+1. Reconcile the registered schema while preserving existing data. Supported
+   ordinary updates should succeed without application-written migrations.
+2. Roll back a failed update before deciding recovery. Use supported,
+   data-preserving reconciliation wherever possible; never guess lossy
+   conversions simply to force an update through.
+3. Only when a schema incompatibility cannot be reconciled safely, rebuild the
+   affected database from its complete registered schema as a last resort. This
+   replaces its contents with an empty database; other databases are unaffected.
+4. Verify the new tables, indexes and triggers before reporting success. Log the
+   original failure, the fallback decision and its outcome, and explicitly report
+   that the database was rebuilt. The app then handles the empty data itself.
+
+Rebuilding is exceptional, undesirable recovery—not the normal upgrade path or
+a substitute for improving reconciliation. Every rebuild should be diagnosable
+and investigated for an updater improvement, with a populated regression case
+when applicable. Removing a declaration alone is not a reason to rebuild.
+
+A data-preserving **table rebuild** described below copies existing rows into an
+updated table. A last-resort **database rebuild** discards the affected database's
+contents and recreates the registered schema. These are different operations.
+
+Do not turn every exception into a database rebuild. Disk exhaustion, permission
+errors, unavailable storage, lock contention and invalid target declarations
+are not fixed by discarding data. Report those failures rather than repeatedly
+resetting. If last-resort rebuilding itself fails, report failure and never
+expose a partially initialized database. Coordinate active handles before
+replacement; a point-of-use update of selected tables is not a complete registry
+from which to recreate a database.
+
+Recovery must be observable through both logging and an explicit initialization
+outcome distinguishing normal initialization from successful rebuilding. Log
+schema/error categories and recovery stages without stored row values, secrets,
+or application credentials. Initialization returns `DBInitializationResult.ready`,
+`.rebuilt`, or `.reset`
+(for an explicit caller-requested reset). A thrown error means initialization
+did not complete; `hasInit` is false and the initializer exposes no handle.
+
+### Implemented recovery boundary
+
+`initDatabase(updateDB: true)` enables last-resort recovery for a nonempty complete
+registry on a writable connection. `updateDB: false`, read-only opens and
+selected-table `updateTables`/trigger synchronization never initiate a database
+rebuild. Callers must quiesce all users of the affected database before calling
+initialization; package locks do not stop arbitrary queries in another isolate.
+Initialization calls on this singleton are serialized, and its handle is withheld
+until preparation finishes. Previously selected handles are closed on reinitialization.
+
+Recovery includes changed/new keys or relationships, changed generated columns,
+unavailable preservable row identity, conflicting index definitions, value-changing
+copies, constraints violated by copied legacy rows, and failed foreign-key
+validation. It also handles legacy schema shapes outside the parser's support
+and SQL conflicts such as a view occupying a registered table name.
+
+During reconciliation only, StateError, FormatException, RangeError and
+UnsupportedError can attempt replacement, as can SQLite ERROR (1), SCHEMA (17),
+CONSTRAINT (19) and MISMATCH (20). Successful verification of a fresh replacement
+is required before discarding the original data. Invalid declarations detected
+up front fail without recovery; invalid target SQL discovered during replacement
+rolls back the whole transaction. Unclassified driver errors, storage/locking
+errors, integrity/corruption errors, opening/commit failures and PRAGMA cleanup
+errors propagate. These are not schema-rebuild signals.
+
+The updater uses a savepoint inside its exclusive update transaction. A recoverable
+legacy schema failure rolls back that attempt, then removes user tables/views/triggers
+and recreates the full registered schema in the same transaction. Indexes are
+recreated from declarations. This is a logical database rebuild, not deletion of
+the database file or its WAL sidecars. Existing unregistered objects/data are
+retained during ordinary updates but are discarded by successful last-resort
+rebuilding. Other database files remain untouched.
+
+Replacement validation includes schema reconciliation, registered triggers,
+`quick_check` and `foreign_key_check`. If replacement fails, the outer transaction
+rolls back the original contents, and initialization closes/invalidates its
+handle. There is one recovery attempt, never a reset loop. Logs distinguish the
+reason, replacement commit and completed recovery without recording row values.
+If connection cleanup fails after commit, initialization throws and closes the
+handle; the commit log identifies that replacement already happened. Reopening
+must validate again. Recovery does not promise success with broken storage.
+
+```dart
+final outcome = await initializer.initDatabase(databaseKey);
+if (outcome == DBInitializationResult.rebuilt) {
+  // The consuming app decides how to populate its now-empty database.
+}
+```
+
+Existing callers may continue awaiting and ignoring the result, but applications
+that need to react to recovery should inspect it. `resetDB: true` still requests
+an explicit destructive reset and returns `.reset`; it is separate from fallback.
+
+## Current initialization
+
 `DBTable` and `DBField` describe the schema. Register tables and triggers, then
 await `TunaiDBInitializer().initDatabase(outletKey, updateDB: true)` before
 starting application queries or background workers. `true` remains the default.
@@ -45,8 +147,8 @@ All selected tables and registered triggers are reconciled in one SQLite
 transaction. Copy errors, incompatible data, schema verification failures,
 index conflicts, and integrity failures roll the transaction back. A retry
 starts from the original schema; temporary rebuild tables do not survive a
-failed transaction. No INSERT OR REPLACE/IGNORE, COALESCE, or database reset is
-used to make bad data fit.
+failed transaction. No INSERT OR REPLACE/IGNORE or COALESCE is used to make bad data fit. Full
+initialization may then recover through the last-resort path described above.
 
 Following SQLite's [table rebuild procedure](https://www.sqlite.org/lang_altertable.html#making_other_kinds_of_table_schema_changes),
 foreign-key enforcement is temporarily disabled before the transaction and its
@@ -62,10 +164,12 @@ PRAGMAs must not be changed by other work during this operation.
 The updater never guesses column renames, new row identities, foreign-key
 mappings, or lossy value conversions. Changes to existing primary keys,
 AUTOINCREMENT, or foreign-key targets, and new key columns, report a specific
-error and preserve the database. Model changes to generated columns also stop.
+incompatibility and roll back the data-preserving attempt. Model changes to generated columns also stop.
 A rowid table that shadows all three SQLite rowid aliases cannot be safely
-rebuilt automatically. Resolve the model/data incompatibility deliberately;
-do not recover by wiping customer data or swallowing the error.
+rebuilt automatically by the current reconciler. Selected-table repair propagates
+these failures after rollback. Full
+initialization can instead reach the logged last-resort database rebuild above;
+it must never become a silent reset or swallowed error.
 
 Removing a declaration is not permission to delete persisted data. It can mean
 an older app build is using a newer database. Intentional destructive cleanup
@@ -86,10 +190,35 @@ The caller must serialize outlet initialization and coordinate worker startup.
 `updateDB: false` opens without table or trigger reconciliation; fresh databases
 still receive the registered tables through onCreate. This is useful for a
 caller that explicitly owns initialization. It is not the normal login setting.
-`resetDB: true` remains an explicit destructive operation, never automatic repair.
+`resetDB: true` is an explicit destructive operation, separate from the
+last-resort recovery contract above.
 Calling synchronizeTriggers explicitly also preserves unregistered triggers.
 
 ## Regression coverage
+
+`test/schema_recovery_test.dart` covers successful populated recovery, normal
+preservation, failed replacement rollback, key changes, PRAGMA restoration,
+partial-update exclusion, invalid declarations, read-only/database-full failures,
+durable reopening, unsupported valid legacy SQL, and table/view conflicts.
+Run the combined native regression and recovery suite using uniquely named
+synthetic fixture (no customer database):
+
+```sh
+cd example
+flutter test integration_test/database_integration_test.dart -d <device-id>
+```
+
+
+The combined suite runs the existing 68 database scenarios followed by recovery
+and reopen checks. It selects the package's actual backend and storage path,
+including FFI/Application Support on Android and native SQLite/Library on iOS.
+To reuse a single compiled iOS simulator test binary across device configurations:
+
+```sh
+flutter build ios --simulator --debug -t integration_test/database_integration_test.dart
+flutter drive --no-pub --use-application-binary=build/ios/iphonesimulator/Runner.app \
+  --driver=test_driver/database_driver.dart -d <simulator-id>
+```
 
 Tests exercise legacy defaults, missing columns, fresh installs, actual
 initDatabase true/false behavior, idempotency, quoted defaults, NULL preservation,
