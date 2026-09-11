@@ -235,6 +235,10 @@ AUTOINCREMENT, rowids, and concurrent handles. Run `flutter test` and
 `flutter analyze`; full analysis currently also reports legacy query/example
 lint findings outside the updater.
 
+The [field-type/default matrix](FIELD_TYPE_MATRIX.md) adds 345 shared host/native
+cases covering all type pairs, default addition/change/removal, numeric and text
+boundaries, rollback, recovery and reopening.
+
 ## Branch transition
 
 Historically Tunaipos pinned the production branch. Main contained an older API.

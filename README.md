@@ -156,3 +156,7 @@ The [Flutter Test Lab](example/TEST_LAB.md) runs 69 real-database scenarios with
 category filters, crucial-feature checks and JSON reports. It shares its suite
 with automated host and native integration tests and keeps package defects
 visible as failures.
+
+The [field-type matrix](docs/FIELD_TYPE_MATRIX.md) adds 345 automated cases for
+all type transitions, default lifecycles, value boundaries and recovery, shared
+between the host and native test runners.
