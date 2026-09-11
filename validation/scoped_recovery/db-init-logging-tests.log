@@ -1,0 +1,198 @@
+00:00 +0: loading /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart
+00:00 +0: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/scoped_recovery_test.dart: recovery clears only affected parent and transitive children, preserves other parent and unrelated rows
+00:00 +1: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: initialization logs scoped recovery, completion and a new reopen attempt
+00:00 +2: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: initialization logs scoped recovery, completion and a new reopen attempt
+00:00 +3: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/scoped_recovery_test.dart: multiple failures accumulate atomically and recover cycles
+00:00 +3: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: failed initialization logs fatal event and never logs completed
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:00 +4: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/scoped_recovery_test.dart: multiple failures accumulate atomically and recover cycles
+00:00 +4: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: throwing diagnostic sink cannot break open, recovery or failure cleanup
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:00 +5: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: throwing diagnostic sink cannot break open, recovery or failure cleanup
+00:01 +6: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: throwing diagnostic sink cannot break open, recovery or failure cleanup
+00:01 +7: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/scoped_recovery_test.dart: new FK violation clears child only
+00:01 +7: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: initialization rebuilds incompatible populated database and persists result
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:01 +8: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: initialization rebuilds incompatible populated database and persists result
+00:01 +9: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: initialization rebuilds incompatible populated database and persists result
+00:01 +10: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: initialization rebuilds incompatible populated database and persists result
+00:01 +11: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/scoped_recovery_test.dart: incomplete registry never discards data even when recovery requested
+00:01 +11: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: supported update preserves stored NULL and removes undeclared tables
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:01 +12: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: supported update preserves stored NULL and removes undeclared tables
+00:01 +13: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: bad replacement trigger rolls back entire rebuild and invalidates handle
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:01 +14: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: partial update never rebuilds whole database
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+TunaiDBError: TunaiDB automatic schema update failed: SqfliteFfiException(sqlite_error: 1299, , SqliteException(1299): while executing, NOT NULL constraint failed: items__tunai_update.value, constraint failed (code 1299)
+  Causing statement: INSERT INTO "items__tunai_update" ("rowid", "id", "value") SELECT "rowid", "id", "value" FROM "items", parameters: }) DatabaseException(SqliteException(1299): while executing, NOT NULL constraint failed: items__tunai_update.value, constraint failed (code 1299)
+  Causing statement: INSERT INTO "items__tunai_update" ("rowid", "id", "value") SELECT "rowid", "id", "value" FROM "items", parameters: ) sql 'INSERT INTO "items__tunai_update" ("rowid", "id", "value") SELECT "rowid", "id", "value" FROM "items"' {details: {database: {path: /var/folders/q8/4mt9h6rd2mv7ghgh4z61gpn40000gn/T/tunai-recovery-test-752sBg/recovery_test.db, id: 16, readOnly: false, singleInstance: false}}}
+00:01 +15: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: duplicate target declarations cannot trigger recovery
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:01 +16: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: read-only failure cannot trigger recovery
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:01 +17: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: key incompatibility rebuilds and restores foreign key settings
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:01 +18: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: database-full error preserves rows and never starts recovery
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:01 +19: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: valid quoted legacy SQL reconciles without losing rows
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:01 +20: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: legacy view occupying a registered table name recovers
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:01 +21: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: full model removes obsolete schema while retaining rows and is idempotent
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:01 +22: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: removal and new required column failure roll back selected schema changes
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:01 +23: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: full model key change uses explicit last-resort recovery
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:01 +24: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: undeclared foreign key target fails without committing removals
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:01 +25: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: full model preserves related rows while removing columns and old constraints
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:01 +26: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: case-only column spelling changes preserve values
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:01 +27: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: empty complete registry removes all user objects
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:01 +28: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: updateDB false does not reconcile or rebuild
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:01 +29: All tests passed!

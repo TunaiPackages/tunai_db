@@ -1,0 +1,867 @@
+00:00 +0: loading /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/scoped_recovery_test.dart
+00:00 +0: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/left_join_clause_generator_test.dart: LeftJoinClauseGenerator Tests should generate LEFT JOIN clause for single join
+00:00 +1: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/where_clause_generator_test.dart: WhereClauseGenerator Tests should return empty string when no filters provided
+00:00 +2: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/scoped_recovery_test.dart: recovery clears only affected parent and transitive children, preserves other parent and unrelated rows
+00:00 +3: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/scoped_recovery_test.dart: recovery clears only affected parent and transitive children, preserves other parent and unrelated rows
+00:00 +4: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/scoped_recovery_test.dart: recovery clears only affected parent and transitive children, preserves other parent and unrelated rows
+00:00 +5: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/scoped_recovery_test.dart: recovery clears only affected parent and transitive children, preserves other parent and unrelated rows
+00:00 +6: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/scoped_recovery_test.dart: recovery clears only affected parent and transitive children, preserves other parent and unrelated rows
+00:00 +7: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/scoped_recovery_test.dart: recovery clears only affected parent and transitive children, preserves other parent and unrelated rows
+00:00 +8: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/scoped_recovery_test.dart: recovery clears only affected parent and transitive children, preserves other parent and unrelated rows
+00:00 +9: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/scoped_recovery_test.dart: recovery clears only affected parent and transitive children, preserves other parent and unrelated rows
+00:00 +10: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/scoped_recovery_test.dart: recovery clears only affected parent and transitive children, preserves other parent and unrelated rows
+00:00 +11: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/scoped_recovery_test.dart: recovery clears only affected parent and transitive children, preserves other parent and unrelated rows
+00:00 +12: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/scoped_recovery_test.dart: recovery clears only affected parent and transitive children, preserves other parent and unrelated rows
+00:00 +13: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/scoped_recovery_test.dart: recovery clears only affected parent and transitive children, preserves other parent and unrelated rows
+00:00 +14: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/scoped_recovery_test.dart: recovery clears only affected parent and transitive children, preserves other parent and unrelated rows
+00:00 +15: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/scoped_recovery_test.dart: recovery clears only affected parent and transitive children, preserves other parent and unrelated rows
+00:00 +16: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/scoped_recovery_test.dart: recovery clears only affected parent and transitive children, preserves other parent and unrelated rows
+00:01 +17: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty integer -> integer, required=false, default=false
+00:01 +18: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty integer -> integer, required=false, default=false
+00:01 +19: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty integer -> integer, required=false, default=false
+00:01 +20: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty integer -> integer, required=false, default=false
+00:01 +21: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty integer -> integer, required=false, default=false
+00:01 +22: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty integer -> integer, required=false, default=false
+00:01 +23: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty integer -> integer, required=false, default=false
+00:01 +24: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty integer -> integer, required=false, default=false
+00:01 +25: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty integer -> integer, required=false, default=true
+00:03 +26: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty integer -> integer, required=true, default=false
+00:03 +27: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty integer -> integer, required=true, default=true
+00:03 +28: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty integer -> text, required=false, default=false
+00:03 +29: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty integer -> text, required=false, default=true
+00:04 +30: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty integer -> text, required=true, default=false
+00:04 +31: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty integer -> text, required=true, default=true
+00:04 +32: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty integer -> real, required=false, default=false
+00:04 +33: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty integer -> real, required=false, default=true
+00:05 +34: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty integer -> real, required=true, default=false
+00:05 +35: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty integer -> real, required=true, default=true
+00:05 +36: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/write_fallback_test.dart: fallback batch upserts duplicate new keys and preserves NULL
+00:05 +37: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty text -> integer, required=false, default=false
+00:05 +38: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty text -> integer, required=false, default=false
+00:05 +39: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/write_fallback_test.dart: fallback constraints throw, roll back and leave queue usable
+00:05 +40: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty text -> integer, required=false, default=true
+00:05 +41: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty text -> integer, required=false, default=true
+00:05 +42: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty text -> integer, required=false, default=true
+00:05 +43: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/select_clause_generator_test.dart: SelectClauseGenerator Tests should generate SELECT clause with one left join
+00:05 +44: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty text -> integer, required=true, default=false
+00:05 +45: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty text -> integer, required=true, default=false
+00:05 +46: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty text -> integer, required=true, default=false
+00:05 +47: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty text -> integer, required=true, default=true
+00:05 +48: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_reconciliation_test.dart: upgrades legacy defaults, keeps rows and unknown schema, and is idempotent
+00:05 +49: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_reconciliation_test.dart: upgrades legacy defaults, keeps rows and unknown schema, and is idempotent
+00:05 +50: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/column_conversion_test.dart: multi-column six type changes with add remove defaults and indexes
+00:05 +50: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_reconciliation_test.dart: initDatabase updateDB repairs before triggers and false skips reconciliation
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:05 +51: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/column_conversion_test.dart: multi-column six type changes with add remove defaults and indexes
+00:05 +51: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_reconciliation_test.dart: initDatabase updateDB repairs before triggers and false skips reconciliation
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:05 +52: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/column_conversion_test.dart: multi-column six type changes with add remove defaults and indexes
+00:05 +52: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_reconciliation_test.dart: trigger replacement preserves literal case, unknown triggers and rolls back failures
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:06 +53: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/column_conversion_test.dart: multi-column six type changes with add remove defaults and indexes
+00:06 +53: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_reconciliation_test.dart: fresh creation adds indexes and uses escaped nonempty defaults
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:06 +54: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/column_conversion_test.dart: multi-column six type changes with add remove defaults and indexes
+00:06 +54: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_reconciliation_test.dart: adds required columns with defaults to populated tables
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:06 +55: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/column_conversion_test.dart: multi-column six type changes with add remove defaults and indexes
+00:06 +56: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/column_conversion_test.dart: multi-column six type changes with add remove defaults and indexes
+00:06 +56: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_reconciliation_test.dart: rewrites quoted and parenthesized defaults without changing existing NULLs
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:06 +57: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/column_conversion_test.dart: multi-column six type changes with add remove defaults and indexes
+00:06 +57: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_reconciliation_test.dart: tightens nullability when all data satisfies it and can relax it
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:06 +58: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/column_conversion_test.dart: multi-column six type changes with add remove defaults and indexes
+00:06 +58: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_reconciliation_test.dart: rolls back all schema and rows when required existing data is NULL
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+TunaiDBError: TunaiDB automatic schema update failed: SqfliteFfiException(sqlite_error: 1299, , SqliteException(1299): while executing, NOT NULL constraint failed: items__tunai_update.value, constraint failed (code 1299)
+  Causing statement: INSERT INTO "items__tunai_update" ("rowid", "id", "value") SELECT "rowid", "id", "value" FROM "items", parameters: }) DatabaseException(SqliteException(1299): while executing, NOT NULL constraint failed: items__tunai_update.value, constraint failed (code 1299)
+  Causing statement: INSERT INTO "items__tunai_update" ("rowid", "id", "value") SELECT "rowid", "id", "value" FROM "items", parameters: ) sql 'INSERT INTO "items__tunai_update" ("rowid", "id", "value") SELECT "rowid", "id", "value" FROM "items"' {details: {database: {path: :memory:, id: 11, readOnly: false, singleInstance: false}}}
+00:06 +59: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/column_conversion_test.dart: multi-column six type changes with add remove defaults and indexes
+00:06 +59: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_reconciliation_test.dart: allows empty-table required additions but rejects populated additions without a default
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+TunaiDBError: TunaiDB automatic schema update failed: SqfliteFfiException(sqlite_error: 1299, , SqliteException(1299): while executing, NOT NULL constraint failed: items__tunai_update.value, constraint failed (code 1299)
+  Causing statement: INSERT INTO "items__tunai_update" ("rowid", "id") SELECT "rowid", "id" FROM "items", parameters: }) DatabaseException(SqliteException(1299): while executing, NOT NULL constraint failed: items__tunai_update.value, constraint failed (code 1299)
+  Causing statement: INSERT INTO "items__tunai_update" ("rowid", "id") SELECT "rowid", "id" FROM "items", parameters: ) sql 'INSERT INTO "items__tunai_update" ("rowid", "id") SELECT "rowid", "id" FROM "items"' {details: {database: {path: :memory:, id: 12, readOnly: false, singleInstance: false}}}
+00:06 +60: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/column_conversion_test.dart: multi-column six type changes with add remove defaults and indexes
+00:06 +60: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_reconciliation_test.dart: rejects affinity conversions that alter stored values
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+TunaiDBError: TunaiDB automatic schema update failed: Bad state: Automatic schema update would change stored values in items
+00:06 +61: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/column_conversion_test.dart: multi-column six type changes with add remove defaults and indexes
+00:06 +62: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/column_conversion_test.dart: multi-column six type changes with add remove defaults and indexes
+00:06 +62: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_reconciliation_test.dart: updates declared type when existing numeric values survive exactly
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:06 +63: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/column_conversion_test.dart: multi-column six type changes with add remove defaults and indexes
+00:06 +63: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_reconciliation_test.dart: preserves child foreign keys and does not fire delete cascades
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:06 +64: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/column_conversion_test.dart: multi-column six type changes with add remove defaults and indexes
+00:06 +64: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_reconciliation_test.dart: restores PRAGMAs and rolls back when foreign-key validation fails
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+TunaiDBError: TunaiDB automatic schema update failed: Bad state: Automatic schema update would leave foreign-key violations
+00:06 +65: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/column_conversion_test.dart: multi-column six type changes with add remove defaults and indexes
+00:06 +65: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_reconciliation_test.dart: preserves AUTOINCREMENT high-water mark after deleting highest row
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:06 +66: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/column_conversion_test.dart: multi-column six type changes with add remove defaults and indexes
+00:06 +66: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_reconciliation_test.dart: preserves hidden rowids, generated columns and STRICT table options
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:06 +67: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/column_conversion_test.dart: multi-column six type changes with add remove defaults and indexes
+00:06 +68: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/column_conversion_test.dart: multi-column six type changes with add remove defaults and indexes
+00:06 +68: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_reconciliation_test.dart: preserves WITHOUT ROWID and named constraints when only default changes
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:06 +69: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/column_conversion_test.dart: multi-column six type changes with add remove defaults and indexes
+00:06 +69: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_reconciliation_test.dart: separate handles serialize repeated rebuilds and preserve temp-name collisions
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:06 +70: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty text -> real, required=false, default=true
+00:06 +71: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty text -> real, required=false, default=true
+00:06 +72: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/column_conversion_test.dart: multi-column late second-column failure rolls back and retries
+00:06 +73: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty text -> real, required=true, default=false
+00:06 +74: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/column_conversion_test.dart: mixed conversion across 600 rows, default=false
+00:06 +75: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/column_conversion_test.dart: mixed conversion across 600 rows, default=false
+00:06 +76: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty real -> integer, required=false, default=false
+00:06 +77: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/column_conversion_test.dart: mixed conversion across 600 rows, default=true
+00:06 +78: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add FK to populated valid values; foreign_keys=false
+00:07 +79: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add FK to populated valid values; foreign_keys=false
+00:07 +80: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add FK to populated valid values; foreign_keys=false
+00:07 +81: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: initialization logs scoped recovery, completion and a new reopen attempt
+00:07 +82: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty real -> integer, required=true, default=false
+00:07 +83: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/column_conversion_test.dart: embedded NULs and unrelated blobs survive native conversion
+00:07 +83: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: failed initialization logs fatal event and never logs completed
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:07 +84: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add FK to populated valid values; foreign_keys=true
+00:07 +85: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add FK to populated valid values; foreign_keys=true
+00:07 +85: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: throwing diagnostic sink cannot break open, recovery or failure cleanup
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:07 +86: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add FK to populated valid values; foreign_keys=true
+00:07 +87: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/column_conversion_test.dart: WITHOUT ROWID text identities survive conversion across batches
+00:07 +88: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/column_conversion_test.dart: WITHOUT ROWID text identities survive conversion across batches
+00:07 +89: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty real -> text, required=false, default=false
+00:07 +89: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: initialization rebuilds incompatible populated database and persists result
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:07 +90: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty real -> text, required=false, default=false
+00:07 +91: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add FK with orphan values; foreign_keys=false
+00:07 +92: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add FK with orphan values; foreign_keys=false
+00:07 +92: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: supported update preserves stored NULL and removes undeclared tables
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:07 +93: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add FK with orphan values; foreign_keys=false
+00:07 +94: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add FK with orphan values; foreign_keys=false
+00:07 +95: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add FK with orphan values; foreign_keys=false
+00:08 +95: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: bad replacement trigger rolls back entire rebuild and invalidates handle
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:08 +96: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty real -> text, required=true, default=false
+00:08 +97: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty real -> text, required=true, default=false
+00:08 +97: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: partial update never rebuilds whole database
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:08 +98: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add FK with orphan values; foreign_keys=true
+00:08 +98: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: partial update never rebuilds whole database
+TunaiDBError: TunaiDB automatic schema update failed: SqfliteFfiException(sqlite_error: 1299, , SqliteException(1299): while executing, NOT NULL constraint failed: items__tunai_update.value, constraint failed (code 1299)
+  Causing statement: INSERT INTO "items__tunai_update" ("rowid", "id", "value") SELECT "rowid", "id", "value" FROM "items", parameters: }) DatabaseException(SqliteException(1299): while executing, NOT NULL constraint failed: items__tunai_update.value, constraint failed (code 1299)
+  Causing statement: INSERT INTO "items__tunai_update" ("rowid", "id", "value") SELECT "rowid", "id", "value" FROM "items", parameters: ) sql 'INSERT INTO "items__tunai_update" ("rowid", "id", "value") SELECT "rowid", "id", "value" FROM "items"' {details: {database: {path: /var/folders/q8/4mt9h6rd2mv7ghgh4z61gpn40000gn/T/tunai-recovery-test-b2xccG/recovery_test.db, id: 16, readOnly: false, singleInstance: false}}}
+00:08 +99: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add FK with orphan values; foreign_keys=true
+00:08 +99: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: duplicate target declarations cannot trigger recovery
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:08 +100: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add FK with orphan values; foreign_keys=true
+00:08 +100: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: read-only failure cannot trigger recovery
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:08 +101: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add FK with orphan values; foreign_keys=true
+00:08 +102: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add FK with orphan values; foreign_keys=true
+00:08 +102: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: key incompatibility rebuilds and restores foreign key settings
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:08 +103: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: key incompatibility rebuilds and restores foreign key settings
+00:08 +104: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: key incompatibility rebuilds and restores foreign key settings
+00:08 +105: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: key incompatibility rebuilds and restores foreign key settings
+00:08 +106: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: key incompatibility rebuilds and restores foreign key settings
+00:08 +107: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty real -> real, required=false, default=false
+00:08 +107: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: database-full error preserves rows and never starts recovery
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:08 +108: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty real -> real, required=false, default=false
+00:08 +109: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty real -> real, required=false, default=false
+00:08 +110: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add FK with NULL values; foreign_keys=false
+00:08 +111: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add FK with NULL values; foreign_keys=false
+00:08 +111: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: valid quoted legacy SQL reconciles without losing rows
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:08 +112: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add FK with NULL values; foreign_keys=false
+00:08 +113: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty real -> real, required=false, default=true
+00:08 +113: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: legacy view occupying a registered table name recovers
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:08 +114: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: legacy view occupying a registered table name recovers
+00:08 +115: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add FK with NULL values; foreign_keys=true
+00:08 +115: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: full model removes obsolete schema while retaining rows and is idempotent
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:08 +116: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: empty real -> real, required=true, default=false
+00:09 +117: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: full model removes obsolete schema while retaining rows and is idempotent
+00:09 +118: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: retarget FK to matching parent table; foreign_keys=false
+00:09 +118: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: removal and new required column failure roll back selected schema changes
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:09 +119: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: retarget FK to matching parent table; foreign_keys=false
+00:09 +119: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: full model key change uses explicit last-resort recovery
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:09 +120: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: retarget FK to matching parent table; foreign_keys=false
+00:09 +121: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: retarget FK to matching parent table; foreign_keys=false
+00:09 +122: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: populated type cycle integer/text/real/integer
+00:09 +122: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: undeclared foreign key target fails without committing removals
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:09 +123: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: populated type cycle integer/text/real/integer
+00:09 +123: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: full model preserves related rows while removing columns and old constraints
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:09 +124: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: populated type cycle integer/text/real/integer
+00:09 +124: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: case-only column spelling changes preserve values
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:09 +125: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: populated type cycle integer/text/real/integer
+00:09 +126: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: case-only column spelling changes preserve values
+00:09 +127: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: retarget FK to nonmatching parent table; foreign_keys=false
+00:09 +127: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: empty complete registry removes all user objects
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:09 +128: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: retarget FK to nonmatching parent table; foreign_keys=false
+00:09 +128: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/schema_recovery_test.dart: updateDB false does not reconcile or rebuild
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:09 +129: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: retarget FK to nonmatching parent table; foreign_keys=false
+00:09 +130: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: populated type cycle integer/real/text/integer
+00:09 +131: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: retarget FK to nonmatching parent table; foreign_keys=true
+00:09 +132: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: retarget FK to nonmatching parent table; foreign_keys=true
+00:09 +133: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: retarget FK to nonmatching parent table; foreign_keys=true
+00:09 +134: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: retarget FK to nonmatching parent table; foreign_keys=true
+00:09 +135: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: retarget FK to nonmatching parent table; foreign_keys=true
+00:09 +136: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: retarget FK to nonmatching parent table; foreign_keys=true
+00:09 +137: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: retarget FK to nonmatching parent table; foreign_keys=true
+00:09 +138: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: populated type cycle text/integer/real/text
+00:09 +139: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: remove FK and retain column; foreign_keys=false
+00:09 +140: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: populated type cycle text/real/integer/text
+00:09 +141: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: populated type cycle text/real/integer/text
+00:09 +142: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: populated type cycle text/real/integer/text
+00:09 +143: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: populated type cycle text/real/integer/text
+00:09 +144: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: populated type cycle text/real/integer/text
+00:09 +145: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: populated type cycle text/real/integer/text
+00:09 +146: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: populated type cycle text/real/integer/text
+00:09 +147: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: populated type cycle text/real/integer/text
+00:09 +148: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: remove FK and its parent table together; foreign_keys=false
+00:09 +149: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: populated type cycle real/integer/text/real
+00:10 +150: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: populated type cycle real/integer/text/real
+00:10 +151: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: remove FK column; foreign_keys=false
+00:10 +152: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: populated type cycle real/text/integer/real
+00:10 +153: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: populated type cycle real/text/integer/real
+00:10 +154: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: drop child table; foreign_keys=false
+00:10 +155: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> integer: null, required=false
+00:10 +156: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> integer: null, required=false
+00:10 +157: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: drop parent while child still references it; foreign_keys=false
+00:10 +158: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> integer: null, required=true
+00:10 +159: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> integer: null, required=true
+00:10 +160: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: missing referenced column; foreign_keys=false
+00:10 +161: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> integer: zero, required=false
+00:10 +162: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: missing referenced column; foreign_keys=true
+00:10 +163: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> integer: zero, required=true
+00:10 +164: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add required FK over existing NULLs; foreign_keys=false
+00:10 +165: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> integer: positive, required=false
+00:10 +166: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add required FK over existing NULLs; foreign_keys=true
+00:10 +167: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> integer: positive, required=true
+00:10 +168: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> integer: positive, required=true
+00:10 +169: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: tighten FK nullability over valid rows; foreign_keys=true
+00:10 +170: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> integer: negative, required=false
+00:10 +171: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: change FK default without rewriting rows; foreign_keys=false
+00:10 +172: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> integer: negative, required=true
+00:10 +173: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: change FK default without rewriting rows; foreign_keys=true
+00:10 +174: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> integer: exact-double-boundary, required=false
+00:10 +175: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: remove legacy delete cascade without deleting children; foreign_keys=false
+00:10 +176: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> integer: exact-double-boundary, required=true
+00:11 +177: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> integer: exact-double-boundary, required=true
+00:11 +178: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add FK column: nullable; foreign_keys=false
+00:11 +179: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> integer: inexact-double-boundary, required=false
+00:11 +180: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add FK column: nullable; foreign_keys=true
+00:11 +181: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> integer: inexact-double-boundary, required=true
+00:11 +182: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add FK column: valid default; foreign_keys=false
+00:11 +183: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> integer: int64-max, required=false
+00:11 +184: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add FK column: valid default; foreign_keys=true
+00:11 +185: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> integer: int64-max, required=true
+00:11 +186: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add FK column: orphan default; foreign_keys=false
+00:11 +187: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> integer: int64-min, required=false
+00:11 +188: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add FK column: orphan default; foreign_keys=true
+00:11 +189: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> integer: int64-min, required=true
+00:11 +190: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add FK column: required no default; foreign_keys=false
+00:11 +191: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> integer: negative-inexact-double, required=false
+00:11 +192: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add FK column: required no default; foreign_keys=true
+00:11 +193: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> integer: negative-inexact-double, required=true
+00:11 +194: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: retarget reference to changed primary-key column; foreign_keys=false
+00:11 +195: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> integer: int64-min-plus-one, required=false
+00:11 +196: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: retarget reference to changed primary-key column; foreign_keys=true
+00:11 +197: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> integer: int64-min-plus-one, required=true
+00:11 +198: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: reference a nonunique non-primary column; foreign_keys=false
+00:11 +199: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> integer: non-numeric-storage, required=false
+00:12 +200: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> integer: non-numeric-storage, required=false
+00:12 +201: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add self-reference, orphan=false; foreign_keys=false
+00:12 +202: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> integer: non-numeric-storage, required=true
+00:12 +203: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add self-reference, orphan=false; foreign_keys=true
+00:12 +204: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> text: null, required=false
+00:12 +205: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> text: null, required=false
+00:12 +206: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add self-reference, orphan=true; foreign_keys=true
+00:12 +207: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> text: null, required=true
+00:12 +208: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add cyclic references in reverse table order; foreign_keys=false
+00:12 +209: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> text: zero, required=false
+00:12 +210: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: add cyclic references in reverse table order; foreign_keys=true
+00:12 +211: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> text: zero, required=true
+00:12 +212: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: multiple child tables, orphan=false; foreign_keys=false
+00:12 +213: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> text: positive, required=false
+00:12 +214: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: multiple child tables, orphan=false; foreign_keys=true
+00:12 +215: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> text: positive, required=true
+00:12 +216: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: multiple child tables, orphan=true; foreign_keys=false
+00:12 +217: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> text: negative, required=false
+00:12 +218: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: multiple child tables, orphan=true; foreign_keys=true
+00:12 +219: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> text: negative, required=true
+00:12 +220: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: populated FK types: parent=integer, child=integer; foreign_keys=false
+00:12 +221: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> text: exact-double-boundary, required=false
+00:12 +222: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: populated FK types: parent=integer, child=integer; foreign_keys=true
+00:12 +223: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> text: exact-double-boundary, required=true
+00:13 +224: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> text: exact-double-boundary, required=true
+00:13 +225: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: populated FK types: parent=integer, child=text; foreign_keys=true
+00:13 +226: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> text: inexact-double-boundary, required=false
+00:13 +227: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: populated FK types: parent=integer, child=real; foreign_keys=false
+00:13 +228: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> text: inexact-double-boundary, required=true
+00:13 +229: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: populated FK types: parent=integer, child=real; foreign_keys=true
+00:13 +230: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> text: int64-max, required=false
+00:13 +231: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: populated FK types: parent=text, child=integer; foreign_keys=false
+00:13 +232: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> text: int64-max, required=true
+00:13 +233: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: populated FK types: parent=text, child=integer; foreign_keys=true
+00:13 +234: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> text: int64-min, required=false
+00:13 +235: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: populated FK types: parent=text, child=text; foreign_keys=false
+00:13 +236: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> text: int64-min, required=true
+00:13 +237: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: populated FK types: parent=text, child=text; foreign_keys=true
+00:13 +238: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> text: negative-inexact-double, required=false
+00:13 +239: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: populated FK types: parent=text, child=real; foreign_keys=false
+00:13 +240: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> text: negative-inexact-double, required=true
+00:13 +241: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: populated FK types: parent=text, child=real; foreign_keys=true
+00:13 +242: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> text: int64-min-plus-one, required=false
+00:13 +243: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> text: int64-min-plus-one, required=false
+00:13 +244: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: populated FK types: parent=real, child=integer; foreign_keys=true
+00:13 +245: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> text: int64-min-plus-one, required=true
+00:13 +246: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: populated FK types: parent=real, child=text; foreign_keys=false
+00:13 +247: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> text: non-numeric-storage, required=false
+00:14 +248: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: populated FK types: parent=real, child=text; foreign_keys=true
+00:14 +249: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: populated FK types: parent=real, child=text; foreign_keys=true
+00:14 +250: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> real: null, required=false
+00:14 +251: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> real: null, required=false
+00:14 +252: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/foreign_key_matrix_test.dart: populated FK types: parent=real, child=real; foreign_keys=true
+00:14 +253: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> real: null, required=true
+00:14 +254: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> real: zero, required=false
+00:14 +255: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> real: zero, required=true
+00:14 +256: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> real: positive, required=false
+00:14 +257: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> real: positive, required=true
+00:14 +258: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> real: negative, required=false
+00:14 +259: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> real: negative, required=true
+00:14 +260: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> real: exact-double-boundary, required=false
+00:14 +261: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> real: exact-double-boundary, required=true
+00:14 +262: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> real: inexact-double-boundary, required=false
+00:14 +263: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> real: inexact-double-boundary, required=true
+00:14 +264: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> real: int64-max, required=false
+00:14 +265: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> real: int64-max, required=true
+00:15 +266: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> real: int64-min, required=false
+00:15 +267: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> real: int64-min, required=true
+00:15 +268: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> real: negative-inexact-double, required=false
+00:15 +269: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> real: negative-inexact-double, required=true
+00:15 +270: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> real: int64-min-plus-one, required=false
+00:15 +271: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> real: int64-min-plus-one, required=true
+00:15 +272: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> real: non-numeric-storage, required=false
+00:15 +273: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer -> real: non-numeric-storage, required=true
+00:15 +274: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer default lifecycle: zero, required=false
+00:15 +275: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer default lifecycle: zero, required=true
+00:15 +276: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer default lifecycle: negative, required=false
+00:16 +277: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer default lifecycle: negative, required=true
+00:16 +278: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer default lifecycle: fraction, required=false
+00:16 +279: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer default lifecycle: fraction, required=true
+00:16 +280: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer default lifecycle: true, required=false
+00:16 +281: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer default lifecycle: true, required=true
+00:16 +282: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer default lifecycle: false, required=false
+00:16 +283: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer default lifecycle: false, required=true
+00:16 +284: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer default lifecycle: numeric-string, required=false
+00:16 +285: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer default lifecycle: numeric-string, required=true
+00:16 +286: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer default lifecycle: exponent-string, required=false
+00:16 +287: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer default lifecycle: exponent-string, required=true
+00:16 +288: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer default lifecycle: empty-string, required=false
+00:17 +289: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer default lifecycle: empty-string, required=true
+00:17 +290: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer default lifecycle: quotes-unicode, required=false
+00:17 +291: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer default lifecycle: quotes-unicode, required=true
+00:17 +292: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer default lifecycle: sql-looking-string, required=false
+00:17 +293: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer default lifecycle: sql-looking-string, required=true
+00:17 +294: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer invalid default: NaN
+00:17 +295: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer invalid default: Infinity
+00:17 +296: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer invalid default: -Infinity
+00:18 +297: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer invalid default: [1]
+00:18 +298: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: integer invalid default: {bad: 1}
+00:18 +299: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> integer: null, required=false
+00:18 +300: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> integer: null, required=true
+00:18 +301: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> integer: empty, required=false
+00:18 +302: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> integer: empty, required=true
+00:18 +303: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> integer: plain, required=false
+00:18 +304: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> integer: plain, required=true
+00:18 +305: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> integer: quotes-unicode, required=false
+00:19 +306: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> integer: quotes-unicode, required=true
+00:19 +307: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> integer: nul, required=false
+00:19 +308: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> integer: nul, required=true
+00:19 +309: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> integer: leading-zero, required=false
+00:19 +310: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> integer: leading-zero, required=true
+00:19 +311: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> integer: integer-text, required=false
+00:19 +312: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> integer: integer-text, required=true
+00:19 +313: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> integer: fraction-text, required=false
+00:19 +314: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> integer: fraction-text, required=true
+00:19 +315: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> integer: exponent-text, required=false
+00:19 +316: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> integer: exponent-text, required=true
+00:19 +317: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> integer: int64-text, required=false
+00:19 +318: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> integer: int64-text, required=true
+00:20 +319: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> integer: whitespace-number, required=false
+00:20 +320: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> integer: whitespace-number, required=true
+00:20 +321: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> integer: mixed-text, required=false
+00:20 +322: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> integer: mixed-text, required=true
+00:20 +323: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> integer: overflow-number-text, required=false
+00:20 +324: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> integer: overflow-number-text, required=true
+00:20 +325: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> integer: nan-text, required=false
+00:21 +326: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> integer: nan-text, required=true
+00:21 +327: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> integer: infinity-text, required=false
+00:21 +328: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> integer: infinity-text, required=true
+00:21 +329: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> text: null, required=false
+00:21 +330: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> text: null, required=true
+00:21 +331: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> text: empty, required=false
+00:21 +332: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> text: empty, required=true
+00:21 +333: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> text: plain, required=false
+00:21 +334: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> text: plain, required=true
+00:21 +335: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> text: quotes-unicode, required=false
+00:21 +336: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> text: quotes-unicode, required=true
+00:21 +337: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> text: nul, required=false
+00:21 +338: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> text: nul, required=true
+00:21 +339: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> text: leading-zero, required=false
+00:21 +340: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> text: leading-zero, required=true
+00:21 +341: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> text: integer-text, required=false
+00:22 +342: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> text: integer-text, required=true
+00:22 +343: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> text: fraction-text, required=false
+00:22 +344: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> text: fraction-text, required=true
+00:22 +345: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> text: exponent-text, required=false
+00:22 +346: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> text: exponent-text, required=true
+00:22 +347: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> text: int64-text, required=false
+00:22 +348: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> text: int64-text, required=true
+00:22 +349: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> text: whitespace-number, required=false
+00:22 +350: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> text: whitespace-number, required=true
+00:22 +351: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> text: mixed-text, required=false
+00:22 +352: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> text: mixed-text, required=true
+00:22 +353: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> text: overflow-number-text, required=false
+00:22 +354: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> text: overflow-number-text, required=true
+00:22 +355: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> text: nan-text, required=false
+00:22 +356: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> text: nan-text, required=true
+00:22 +357: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> text: infinity-text, required=false
+00:22 +358: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> text: infinity-text, required=true
+00:22 +359: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> real: null, required=false
+00:22 +360: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> real: null, required=true
+00:22 +361: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> real: empty, required=false
+00:22 +362: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> real: empty, required=true
+00:22 +363: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> real: plain, required=false
+00:22 +364: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> real: plain, required=true
+00:22 +365: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> real: quotes-unicode, required=false
+00:22 +366: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> real: quotes-unicode, required=true
+00:22 +367: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> real: nul, required=false
+00:22 +368: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> real: nul, required=true
+00:22 +369: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> real: leading-zero, required=false
+00:22 +370: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> real: leading-zero, required=true
+00:22 +371: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> real: integer-text, required=false
+00:22 +372: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> real: integer-text, required=true
+00:22 +373: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> real: fraction-text, required=false
+00:23 +374: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> real: fraction-text, required=true
+00:23 +375: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> real: exponent-text, required=false
+00:23 +376: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> real: exponent-text, required=true
+00:23 +377: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> real: int64-text, required=false
+00:23 +378: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> real: int64-text, required=true
+00:23 +379: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> real: whitespace-number, required=false
+00:23 +380: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> real: whitespace-number, required=true
+00:23 +381: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> real: mixed-text, required=false
+00:23 +382: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> real: mixed-text, required=true
+00:23 +383: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> real: overflow-number-text, required=false
+00:23 +384: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> real: overflow-number-text, required=true
+00:23 +385: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> real: nan-text, required=false
+00:23 +386: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> real: nan-text, required=true
+00:23 +387: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> real: infinity-text, required=false
+00:23 +388: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text -> real: infinity-text, required=true
+00:23 +389: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text default lifecycle: zero, required=false
+00:23 +390: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text default lifecycle: zero, required=true
+00:23 +391: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text default lifecycle: negative, required=false
+00:23 +392: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text default lifecycle: negative, required=true
+00:23 +393: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text default lifecycle: fraction, required=false
+00:23 +394: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text default lifecycle: fraction, required=true
+00:23 +395: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text default lifecycle: true, required=false
+00:23 +396: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text default lifecycle: true, required=true
+00:23 +397: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text default lifecycle: false, required=false
+00:23 +398: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text default lifecycle: false, required=true
+00:23 +399: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text default lifecycle: numeric-string, required=false
+00:24 +400: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text default lifecycle: numeric-string, required=true
+00:24 +401: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text default lifecycle: exponent-string, required=false
+00:24 +402: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text default lifecycle: exponent-string, required=true
+00:24 +403: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text default lifecycle: empty-string, required=false
+00:24 +404: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text default lifecycle: empty-string, required=true
+00:24 +405: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text default lifecycle: quotes-unicode, required=false
+00:24 +406: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text default lifecycle: quotes-unicode, required=true
+00:24 +407: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text default lifecycle: sql-looking-string, required=false
+00:24 +408: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text default lifecycle: sql-looking-string, required=true
+00:24 +409: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text invalid default: NaN
+00:24 +410: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text invalid default: Infinity
+00:24 +411: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text invalid default: -Infinity
+00:24 +412: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text invalid default: [1]
+00:24 +413: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: text invalid default: {bad: 1}
+00:24 +414: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> integer: null, required=false
+00:24 +415: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> integer: null, required=true
+00:24 +416: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> integer: zero, required=false
+00:24 +417: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> integer: zero, required=true
+00:24 +418: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> integer: whole, required=false
+00:24 +419: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> integer: whole, required=true
+00:24 +420: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> integer: fraction, required=false
+00:24 +421: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> integer: fraction, required=true
+00:24 +422: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> integer: negative-zero, required=false
+00:24 +423: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> integer: negative-zero, required=true
+00:24 +424: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> integer: smallest-subnormal, required=false
+00:25 +425: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> integer: smallest-subnormal, required=true
+00:25 +426: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> integer: largest-finite, required=false
+00:25 +427: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> integer: largest-finite, required=true
+00:25 +428: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> integer: decimal, required=false
+00:25 +429: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> integer: decimal, required=true
+00:25 +430: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> integer: tiny, required=false
+00:25 +431: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> integer: tiny, required=true
+00:25 +432: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> integer: large, required=false
+00:25 +433: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> integer: large, required=true
+00:25 +434: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> integer: exact-double-boundary, required=false
+00:25 +435: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> integer: exact-double-boundary, required=true
+00:25 +436: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> integer: non-numeric-storage, required=false
+00:25 +437: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> integer: non-numeric-storage, required=true
+00:25 +438: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> text: null, required=false
+00:25 +439: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> text: null, required=true
+00:25 +440: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> text: zero, required=false
+00:25 +441: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> text: zero, required=true
+00:25 +442: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> text: whole, required=false
+00:26 +443: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> text: whole, required=true
+00:26 +444: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> text: fraction, required=false
+00:26 +445: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> text: fraction, required=true
+00:26 +446: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> text: negative-zero, required=false
+00:26 +447: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> text: negative-zero, required=true
+00:26 +448: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> text: smallest-subnormal, required=false
+00:26 +449: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> text: smallest-subnormal, required=true
+00:26 +450: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> text: largest-finite, required=false
+00:26 +451: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> text: largest-finite, required=true
+00:26 +452: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> text: decimal, required=false
+00:26 +453: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> text: decimal, required=true
+00:26 +454: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> text: tiny, required=false
+00:26 +455: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> text: tiny, required=true
+00:26 +456: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> text: large, required=false
+00:26 +457: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> text: large, required=true
+00:26 +458: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> text: exact-double-boundary, required=false
+00:26 +459: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> text: exact-double-boundary, required=true
+00:26 +460: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> text: non-numeric-storage, required=false
+00:26 +461: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> text: non-numeric-storage, required=true
+00:26 +462: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> real: null, required=false
+00:26 +463: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> real: null, required=true
+00:27 +464: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> real: zero, required=false
+00:27 +465: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> real: zero, required=true
+00:27 +466: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> real: whole, required=false
+00:27 +467: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> real: whole, required=true
+00:27 +468: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> real: fraction, required=false
+00:27 +469: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> real: fraction, required=true
+00:27 +470: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> real: negative-zero, required=false
+00:27 +471: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> real: negative-zero, required=true
+00:27 +472: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> real: smallest-subnormal, required=false
+00:27 +473: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> real: smallest-subnormal, required=true
+00:27 +474: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> real: largest-finite, required=false
+00:27 +475: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> real: largest-finite, required=true
+00:27 +476: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> real: decimal, required=false
+00:27 +477: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> real: decimal, required=true
+00:27 +478: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> real: tiny, required=false
+00:27 +479: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> real: tiny, required=true
+00:27 +480: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> real: large, required=false
+00:27 +481: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> real: large, required=true
+00:27 +482: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> real: exact-double-boundary, required=false
+00:27 +483: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> real: exact-double-boundary, required=true
+00:27 +484: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> real: non-numeric-storage, required=false
+00:27 +485: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real -> real: non-numeric-storage, required=true
+00:27 +486: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real default lifecycle: zero, required=false
+00:28 +487: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real default lifecycle: zero, required=true
+00:28 +488: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real default lifecycle: negative, required=false
+00:28 +489: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real default lifecycle: negative, required=true
+00:28 +490: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real default lifecycle: fraction, required=false
+00:28 +491: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real default lifecycle: fraction, required=true
+00:28 +492: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real default lifecycle: true, required=false
+00:28 +493: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real default lifecycle: true, required=true
+00:28 +494: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real default lifecycle: false, required=false
+00:28 +495: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real default lifecycle: false, required=true
+00:28 +496: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real default lifecycle: numeric-string, required=false
+00:28 +497: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real default lifecycle: numeric-string, required=true
+00:28 +498: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real default lifecycle: exponent-string, required=false
+00:28 +499: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real default lifecycle: exponent-string, required=true
+00:28 +500: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real default lifecycle: empty-string, required=false
+00:28 +501: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real default lifecycle: empty-string, required=true
+00:28 +502: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real default lifecycle: quotes-unicode, required=false
+00:29 +503: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real default lifecycle: quotes-unicode, required=true
+00:29 +504: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real default lifecycle: sql-looking-string, required=false
+00:29 +505: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real default lifecycle: sql-looking-string, required=true
+00:29 +506: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real invalid default: NaN
+00:29 +507: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real invalid default: Infinity
+00:29 +508: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real invalid default: -Infinity
+00:29 +509: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real invalid default: [1]
+00:29 +510: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: real invalid default: {bad: 1}
+00:29 +511: /Users/han/flutter_packages/tunai_db-schema-recovery-docs/test/field_type_matrix_test.dart: (tearDownAll)
+00:29 +511: All tests passed!

@@ -92,3 +92,17 @@ both apps plus startup/resync/offline/pending-upload behavior. Populated v184 an
 v185 member_upload recovery loses those local queue rows; no claim is made that
 unsynced data can be downloaded again. No app-owned upload policy is implemented.
 Earlier POS broad tests failed/interrupted and are not a regression sign-off.
+
+## Initialization logging follow-up
+
+Initialization now adds attempt/stage/elapsed time and lifecycle/engine/outcome
+messages using the existing logger contract. The POS adapter maps these to info,
+error and fatal, including background isolates. This changes diagnostics, not
+schema SQL or recovery decisions. The preceding mobile source hashes describe
+the pre-logging candidate; no new mobile run is claimed for this follow-up.
+
+Validation: 511 package tests passed, including 29 focused initialization/recovery
+tests (overlapping the full suite). New cases assert scoped recovery and reopen
+logs, terminal failure without a completed event, omitted paths/DDL, and survival
+of a throwing diagnostic sink. Package analysis retains 92 existing findings,
+none in changed files. POS severity routing has a passing focused test.

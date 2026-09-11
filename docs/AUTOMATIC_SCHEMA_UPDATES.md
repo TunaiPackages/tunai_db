@@ -314,3 +314,26 @@ enable destructive recovery even if an internal caller requests it without
 This policy replaces the previous database-wide-only recovery agreement. Empty
 primary-key changes no longer force any data-loss recovery. Table names and
 reasons are logged, never row contents.
+
+## Initialization diagnostics
+
+Initialization emits structured messages through the existing TunaiDBLogger.logInit
+contract, preserving compatibility with existing logger implementations. Consumers
+can route `schema_initialization: failed;` to fatal, recovery decisions containing
+`; rebuilding` and initialization `_failed`/`_warning` events to error, and other
+lifecycle/committed/completed events to info. TunaiProDBLogger provides this routing
+to TunaiLogger.logInfo/logError/logFatal without coupling this package to the app.
+
+Each event carries attempt, stage and elapsed_ms. Events cover start/options and
+registry counts, previous handle closure, backend/path resolution, file existence,
+explicit reset, configuration/journal mode, fresh table creation, SQLite version,
+reconciliation start or skip, migration/recovery decisions and committed outcomes,
+and final result/upsert capability/affected tables. Terminal failure includes error
+category, schema reason where available and stack; cleanup failures are separate.
+The final completed event is emitted only after initialization succeeds.
+
+Database paths, unique keys, raw CREATE TABLE SQL, stored rows and raw exception
+messages are omitted from these initialization events. Table names remain useful
+schema diagnostics. A throwing logging sink cannot change initialization/recovery
+success or replace the original failure. Logs are diagnostic attempts, not proof
+of durable remote delivery. The app must register its logger in each isolate.

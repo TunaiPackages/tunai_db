@@ -56,6 +56,9 @@ class TunaiDBInitializer {
 
   final _initializationLock = Lock();
   bool _preparing = false;
+  int _attempt = 0;
+  String _stage = 'idle';
+  Stopwatch? _initializationTimer;
 
   bool get hasInit => !_preparing && (_database?.isOpen ?? false);
   Database get database {
@@ -87,11 +90,20 @@ class TunaiDBInitializer {
   }) =>
       _initializationLock.synchronized(() async {
         _preparing = true;
+        _attempt++;
+        _initializationTimer = Stopwatch()..start();
+        _stage = 'starting';
         _rebuiltTables = const {};
         final tables = List<DBTable>.of(_allTables);
         final triggers = List<DBTrigger>.of(_allTriggers);
+        _logRecovery('schema_initialization: started; tables=${tables.length}; '
+            'triggers=${triggers.length}; reset=$resetDB; update=$updateDB; '
+            'read_only=$readOnly; single_instance=$singleInstance');
         try {
+          _stage = 'closing_previous';
           await close();
+          _logRecovery('schema_initialization: previous_handle_closed');
+          _stage = 'opening';
           await _initDB(
             uniqueKey,
             tables: tables,
@@ -101,6 +113,8 @@ class TunaiDBInitializer {
           );
           var result = DBInitializationResult.ready;
           if (updateDB) {
+            _stage = 'reconciling';
+            _logRecovery('schema_initialization: reconciliation_started');
             result = await SchemaReconciler.update(
               _database!,
               tables,
@@ -111,20 +125,33 @@ class TunaiDBInitializer {
               onTablesRebuilt: (names) => _rebuiltTables = names,
             );
           }
+          if (!updateDB) {
+            _logRecovery('schema_initialization: reconciliation_skipped');
+          }
+          _stage = 'capabilities';
           _isSupportUpsert = await _isSqliteVersionSupportUpsert(_database!);
-          return resetDB ? DBInitializationResult.reset : result;
+          final outcome = resetDB ? DBInitializationResult.reset : result;
+          _stage = 'ready';
+          _logRecovery(
+              'schema_initialization: completed; result=${outcome.name}; '
+              'upsert=$_isSupportUpsert; rebuilt_tables=${(_rebuiltTables.toList()..sort()).join(',')}');
+          return outcome;
         } catch (error, stack) {
           _rebuiltTables = const {};
           _logRecovery(
-            'schema_initialization: failed; category=${error.runtimeType}',
+            'schema_initialization: failed; category=${error.runtimeType}; '
+            'reason=${error is SchemaIncompatibility ? error.reason : 'operation_failed'}; '
+            'stack=$stack',
           );
           try {
             await close();
-          } catch (_) {
-            _logRecovery('schema_initialization: close_failed');
+          } catch (closeError) {
+            _logRecovery(
+                'schema_initialization: close_failed; category=${closeError.runtimeType}');
           }
           Error.throwWithStackTrace(error, stack);
         } finally {
+          _initializationTimer?.stop();
           _preparing = false;
         }
       });
@@ -132,7 +159,8 @@ class TunaiDBInitializer {
   void _logRecovery(String event) {
     // A diagnostic sink must not turn committed recovery into another failure.
     try {
-      _logger.logInit(event);
+      _logger.logInit('$event; attempt=$_attempt; stage=$_stage; '
+          'elapsed_ms=${_initializationTimer?.elapsedMilliseconds ?? 0}');
     } catch (_) {
       // The initialization result remains authoritative if logging is unavailable.
     }
@@ -237,11 +265,12 @@ class TunaiDBInitializer {
     try {
       String dbName = '${_dbName}_$uniqueKey.db';
       bool useFFI = Platform.isWindows || Platform.isAndroid;
-      _logger.logInit('* TunaiDB Initializing (useFFI: $useFFI) -> $dbName...');
+      _logRecovery(
+          'schema_initialization: resolving_path; platform=${Platform.operatingSystem}; ffi=$useFFI');
       String path;
 
       if (useFFI) {
-        _logger.logInit('* TunaiDB Platform is Windows or Android, using FFI');
+        _logRecovery('schema_initialization: backend_selected; backend=ffi');
 
         sqfliteFfiInit();
         databaseFactory = databaseFactoryFfi;
@@ -256,19 +285,24 @@ class TunaiDBInitializer {
         path = p.join(databasePath, dbName);
       }
 
-      _logger.logInit('* Found Database path -> $path');
+      _logRecovery('schema_initialization: path_resolved');
       bool databaseExist = await databaseExists(path);
+      _logRecovery(
+          'schema_initialization: file_checked; exists=$databaseExist');
 
       if (!databaseExist) {
         try {
           await Directory(p.dirname(path)).create(recursive: true);
-          _logger.logInit('* Created directory at $path');
+          _logRecovery('schema_initialization: directory_created');
         } catch (e) {
-          _logger.logError('Failed to create directory at path : $path, $e');
+          _logRecovery(
+              'schema_initialization: directory_failed; category=${e.runtimeType}');
           rethrow;
         }
       } else if (resetDB) {
+        _logRecovery('schema_initialization: explicit_reset_started');
         await deleteDatabase(path);
+        _logRecovery('schema_initialization: explicit_reset_completed');
       }
 
       if (useFFI) {
@@ -293,18 +327,22 @@ class TunaiDBInitializer {
         );
       }
 
+      _stage = 'opening';
       final result = await _database!.rawQuery('SELECT sqlite_version();');
       final sqliteVersion = result.first.values.first;
-      _logger.logInit(
-        '* TunaiDB successfully open database ($dbName) version : $sqliteVersion\npath: $_database\n',
+      _logRecovery(
+        'schema_initialization: opened; sqlite=$sqliteVersion',
       );
     } catch (e) {
-      _logger.logInit('* TunaiDB failed to open database : $e');
+      _logRecovery(
+          'schema_initialization: open_failed; category=${e.runtimeType}');
       rethrow;
     }
   }
 
   Future<void> _onConfigure(Database database) async {
+    _stage = 'configuring';
+    _logRecovery('schema_initialization: configuration_started');
     try {
       if (Platform.isIOS || Platform.isMacOS) {
         // On iOS/macOS, we need to handle the "not an error" message
@@ -326,36 +364,42 @@ class TunaiDBInitializer {
         await database.rawQuery('PRAGMA temp_store=MEMORY;');
         await database.rawQuery('PRAGMA cache_size=2000;');
       } catch (e) {
-        _logger.logInit('Warning: Failed to set some PRAGMA values: $e');
+        _logRecovery(
+            'schema_initialization: configuration_warning; category=${e.runtimeType}');
       }
 
       // Verify WAL mode
       final result = await database.rawQuery('PRAGMA journal_mode;');
       final journalMode = result.first.values.first.toString().toUpperCase();
       if (journalMode != 'WAL') {
-        _logger.logInit(
-          'Warning: WAL mode not enabled. Current mode: $journalMode',
+        _logRecovery(
+          'schema_initialization: configuration_warning; journal=$journalMode',
         );
       } else {
-        _logger.logInit('Successfully enabled WAL mode');
+        _logRecovery('schema_initialization: configured; journal=$journalMode');
       }
     } catch (e) {
-      _logger.logInit('Error configuring database: $e');
+      _logRecovery(
+          'schema_initialization: configuration_failed; category=${e.runtimeType}');
       rethrow;
     }
   }
 
   Future<void> _onCreate(Database db, int version, List<DBTable> tables) async {
+    _stage = 'creating';
+    _logRecovery(
+        'schema_initialization: creation_started; tables=${tables.length}');
     try {
       for (var table in tables) {
-        _logger.logInit(
-          '* TunaiDB creating table...\n${table.createTableQuery}\n',
+        _logRecovery(
+          'schema_initialization: creating_table; table=${table.tableName}',
         );
 
         await db.execute(table.createTableQuery);
       }
     } catch (e) {
-      _logger.logInit('* TunaiDB failed to create table $e');
+      _logRecovery(
+          'schema_initialization: creation_failed; category=${e.runtimeType}');
       rethrow;
     }
   }
@@ -400,8 +444,8 @@ Future<bool> _isSqliteVersionSupportUpsert(Database db) async {
       return false;
     }
   } catch (e) {
-    TunaiDBInitializer.logger.logError(
-      '* TunaiDB failed to check if SQLite version supports upsert. $e',
+    TunaiDBInitializer()._logRecovery(
+      'schema_initialization: capability_warning; category=${e.runtimeType}; upsert=false',
     );
     return false;
   }

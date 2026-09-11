@@ -55,6 +55,7 @@ void main() {
       ..setTriggers([]);
   });
   tearDown(() async {
+    TunaiDBInitializer.setLogger(TunaiDBLoggerImpl());
     await initializer.close();
     if (db.isOpen) await db.close();
     initializer
@@ -63,6 +64,71 @@ void main() {
       ..setDBName('tunaiDB');
     PathProviderPlatform.instance = paths;
     await dir.delete(recursive: true);
+  });
+
+  test(
+      'initialization logs scoped recovery, completion and a new reopen attempt',
+      () async {
+    final logger = _RecordingLogger();
+    TunaiDBInitializer.setLogger(logger);
+    await db.close();
+    expect(await initializer.initDatabase('test'),
+        DBInitializationResult.tablesRebuilt);
+    final first = List<String>.of(logger.events);
+    expect(first.any((e) => e.startsWith('schema_initialization: started;')),
+        isTrue);
+    expect(first.any((e) => e.contains('opened; sqlite=')), isTrue);
+    expect(first.any((e) => e.contains('rebuilding_tables=items')), isTrue);
+    expect(first.last, contains('completed; result=tablesRebuilt;'));
+    expect(
+        first.every((e) =>
+            e.contains('attempt=') &&
+            e.contains('stage=') &&
+            e.contains('elapsed_ms=')),
+        isTrue);
+    expect(first.join(), isNot(contains(dir.path)));
+    expect(first.join(), isNot(contains('CREATE TABLE')));
+    logger.events.clear();
+    expect(
+        await initializer.initDatabase('test'), DBInitializationResult.ready);
+    expect(logger.events.last, contains('completed; result=ready;'));
+    final attempt = RegExp(r'attempt=(\d+)');
+    expect(attempt.firstMatch(logger.events.first)!.group(1),
+        isNot(attempt.firstMatch(first.first)!.group(1)));
+  });
+
+  test('failed initialization logs fatal event and never logs completed',
+      () async {
+    final logger = _RecordingLogger();
+    TunaiDBInitializer.setLogger(logger);
+    initializer.setTables([schema(), schema()]);
+    await db.close();
+    await expectLater(initializer.initDatabase('test'), throwsA(anything));
+    expect(initializer.hasInit, isFalse);
+    expect(
+        logger.events.any((e) =>
+            e.startsWith('schema_initialization: failed;') &&
+            e.contains('stage=reconciling') &&
+            e.contains('stack=')),
+        isTrue);
+    expect(
+        logger.events
+            .any((e) => e.contains('schema_initialization: completed;')),
+        isFalse);
+  });
+
+  test(
+      'throwing diagnostic sink cannot break open, recovery or failure cleanup',
+      () async {
+    TunaiDBInitializer.setLogger(_RecordingLogger(throwOnLog: true));
+    await db.close();
+    expect(await initializer.initDatabase('test'),
+        DBInitializationResult.tablesRebuilt);
+    expect(initializer.hasInit, isTrue);
+    initializer.setTables([schema(), schema()]);
+    await expectLater(
+        initializer.initDatabase('test'), throwsA(isA<ArgumentError>()));
+    expect(initializer.hasInit, isFalse);
   });
 
   test(
@@ -472,4 +538,15 @@ class _Paths extends PathProviderPlatform {
   Future<String?> getLibraryPath() async => path;
   @override
   Future<String?> getApplicationSupportPath() async => path;
+}
+
+class _RecordingLogger extends TunaiDBLoggerImpl {
+  _RecordingLogger({this.throwOnLog = false});
+  final bool throwOnLog;
+  final events = <String>[];
+  @override
+  void logInit(String message) {
+    if (throwOnLog) throw StateError('unavailable sink');
+    events.add(message);
+  }
 }

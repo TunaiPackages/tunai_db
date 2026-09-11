@@ -28,3 +28,5 @@
 ## 0.0.1
 
 * TODO: Describe initial release.
+
+- Add correlated initialization lifecycle, engine, recovery and failure diagnostics; protect every initialization log call from sink failures.
