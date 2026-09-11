@@ -34,6 +34,198 @@ DBTable _model(
 
 void registerColumnConversionCases(
     void Function(String, Future<void> Function()) register) {
+  register(
+      'multi-column six type changes with add remove defaults and indexes',
+      () => _fixture((init) async {
+            const types = [
+              DBFieldType.integer,
+              DBFieldType.integer,
+              DBFieldType.text,
+              DBFieldType.text,
+              DBFieldType.real,
+              DBFieldType.real,
+            ];
+            const targets = [
+              DBFieldType.text,
+              DBFieldType.real,
+              DBFieldType.integer,
+              DBFieldType.real,
+              DBFieldType.integer,
+              DBFieldType.text,
+            ];
+            final old = DBTable(tableName: 'items', fields: [
+              _id,
+              for (var c = 0; c < types.length; c++)
+                DBField(
+                    fieldName: 'c$c',
+                    fieldType: types[c],
+                    isNotNull: false,
+                    indexing: c == 0),
+              const DBField(fieldName: 'keep', fieldType: DBFieldType.text),
+              const DBField(fieldName: 'removed', fieldType: DBFieldType.text),
+              const DBField(
+                  fieldName: 'default_only',
+                  fieldType: DBFieldType.text,
+                  defaultValue: 'old',
+                  isNotNull: false),
+            ]);
+            init.setTables([old, _sentinel]);
+            await init.initDatabase('conversion');
+            final batch = init.database.batch();
+            for (var i = 0; i < 600; i++) {
+              final inputs = i.isEven
+                  ? <Object?>[7, 8, '009', '2.5', 10.0, 11.5]
+                  : <Object?>[
+                      Uint8List.fromList([255]),
+                      'bad',
+                      'bad',
+                      'bad',
+                      2.5,
+                      null
+                    ];
+              batch.insert('items', {
+                'id': i,
+                for (var c = 0; c < inputs.length; c++) 'c$c': inputs[c],
+                'keep': 'preserved $i 中文',
+                'removed': 'obsolete',
+                'default_only': i.isEven ? null : 'existing',
+              });
+            }
+            await batch.commit(noResult: true);
+            final target = DBTable(tableName: 'items', fields: [
+              _id,
+              // Deliberately reverse declaration order to catch parameter mixups.
+              for (var c = targets.length - 1; c >= 0; c--)
+                DBField(
+                    fieldName: 'c$c',
+                    fieldType: targets[c],
+                    isNotNull: c.isEven,
+                    indexing: c == 1,
+                    defaultValue: c == 0
+                        ? 'fallback'
+                        : c == 2
+                            ? -9
+                            : c == 4
+                                ? -10
+                                : null),
+              const DBField(fieldName: 'keep', fieldType: DBFieldType.text),
+              const DBField(
+                  fieldName: 'added',
+                  fieldType: DBFieldType.text,
+                  defaultValue: 'new',
+                  indexing: true),
+              const DBField(
+                  fieldName: 'default_only',
+                  fieldType: DBFieldType.text,
+                  defaultValue: 'changed',
+                  isNotNull: false),
+            ]);
+            init.setTables([target, _sentinel]);
+            expect(await init.initDatabase('conversion'),
+                DBInitializationResult.ready);
+            final db = init.database;
+            final rows = await db.query('items', orderBy: 'id');
+            expect(rows, hasLength(600));
+            for (var i = 0; i < rows.length; i++) {
+              final expected = i.isEven
+                  ? <Object?>['7', 8.0, 9, 2.5, 10, '11.5']
+                  : <Object?>['fallback', null, -9, null, -10, null];
+              expect(rows[i], {
+                'id': i,
+                for (var c = 0; c < expected.length; c++) 'c$c': expected[c],
+                'keep': 'preserved $i 中文',
+                'added': 'new',
+                'default_only': i.isEven ? null : 'existing',
+              });
+            }
+            final columns = await db.rawQuery('PRAGMA table_info(items)');
+            expect(columns.map((c) => c['name']),
+                target.fields.map((f) => f.fieldName));
+            for (var c = 0; c < targets.length; c++) {
+              final column = columns.singleWhere((row) => row['name'] == 'c$c');
+              expect(column['type'], targets[c].query);
+              expect(column['notnull'], c.isEven ? 1 : 0);
+            }
+            final indexed = <Object?>[];
+            for (final index in await db.rawQuery('PRAGMA index_list(items)')) {
+              if (index['origin'] == 'c') {
+                final name = (index['name']! as String).replaceAll('"', '""');
+                indexed.addAll((await db.rawQuery('PRAGMA index_info("$name")'))
+                    .map((row) => row['name']));
+              }
+            }
+            expect(indexed, unorderedEquals(['c1', 'added']));
+            await db.insert('items', {'id': 600, 'keep': 'new row'});
+            expect((await db.query('items', where: 'id=600')).single, {
+              'id': 600,
+              'c0': 'fallback',
+              'c1': null,
+              'c2': -9,
+              'c3': null,
+              'c4': -10,
+              'c5': null,
+              'keep': 'new row',
+              'added': 'new',
+              'default_only': 'changed',
+            });
+            expect(await db.query('sentinel'), [
+              {'id': 99}
+            ]);
+            final finalRows = await db.query('items', orderBy: 'id');
+            expect(await init.initDatabase('conversion'),
+                DBInitializationResult.ready);
+            expect(
+                await init.database.query('items', orderBy: 'id'), finalRows);
+          }));
+  register(
+      'multi-column late second-column failure rolls back and retries',
+      () => _fixture((init) async {
+            final db = init.database;
+            final batch = db.batch();
+            for (var i = 0; i < 600; i++) {
+              batch.insert('items', {
+                'id': i,
+                'value': 'bad',
+                'score': i == 599 ? 'bad' : '1.5',
+                'untouched': 'keep $i'
+              });
+            }
+            await batch.commit(noResult: true);
+            final before = await db.query('items', orderBy: 'id');
+            final schema = await db.query('sqlite_master', orderBy: 'name');
+            DBTable target({double? fallback}) =>
+                DBTable(tableName: 'items', fields: [
+                  ..._model(updated: true, value: -1).fields.take(3),
+                  DBField(
+                      fieldName: 'score',
+                      fieldType: DBFieldType.real,
+                      defaultValue: fallback),
+                ]);
+            final logs = <String>[];
+            await expectLater(
+                SchemaReconciler.update(db, [target(), _sentinel],
+                    completeRegistry: true, logRecovery: logs.add),
+                throwsStateError);
+            expect(await db.query('items', orderBy: 'id'), before);
+            expect(await db.query('sqlite_master', orderBy: 'name'), schema);
+            expect(logs, isEmpty);
+            init.setTables([target(fallback: 2.5), _sentinel]);
+            expect(await init.initDatabase('conversion'),
+                DBInitializationResult.ready);
+            final rows = await init.database.query('items', orderBy: 'id');
+            expect(rows, hasLength(600));
+            for (var i = 0; i < 600; i++) {
+              expect(rows[i], {
+                'id': i,
+                'value': -1,
+                'score': i == 599 ? 2.5 : 1.5,
+                'untouched': 'keep $i'
+              });
+            }
+            expect(await init.database.query('sentinel'), [
+              {'id': 99}
+            ]);
+          }));
   for (final fallback in [false, true]) {
     register(
         'mixed conversion across 600 rows, default=$fallback',

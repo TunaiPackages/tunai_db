@@ -46,8 +46,8 @@ cd example
 flutter test integration_test/column_conversion_integration_test.dart -d <device-id>
 ```
 
-The combined native entrypoint runs the seven storage regressions plus the type
-and foreign-key matrices: 422 cases. Each uses its own disposable database; no
+The combined native entrypoint runs nine storage regressions plus the type
+and foreign-key matrices: 424 cases. Each uses its own disposable database; no
 customer data or consuming application is involved.
 
 ## Validation (2026-09-11)
@@ -64,3 +64,27 @@ The Apple runs exposed embedded-NUL truncation on both native TEXT reads and
 String bindings. The final regression seeds real embedded NULs inside SQLite and
 compares hexadecimal bytes after migration, so adapter truncation cannot make the
 assertion pass accidentally. The unchanged-column copy stays inside SQLite.
+
+## Simultaneous column-change regressions
+
+Two additional populated cases exercise 600 rows each:
+
+- All six directed INTEGER/TEXT/REAL conversions in one update, with different
+  defaults and NULL fallbacks per column. The same update tightens nullability,
+  reverses field declaration order, adds and removes columns, switches indexes,
+  and changes a default on an otherwise unchanged column. Assertions compare
+  every retained row, actual column types/nullability/indexes, old versus new-row
+  defaults, unrelated table contents, and close/reopen behavior.
+- A failure in the second changed column on row 599 after earlier batches copied.
+  The first changed column has already used default substitutions. The test
+  verifies exact data/schema rollback and no successful-migration log, then
+  supplies a fallback and retries successfully without a database reset.
+
+These supplement the existing cases that change two columns together.
+
+Follow-up validation (2026-09-11): package suite **500 passed**; the two new
+multi-column cases passed on each of the iOS simulator, Android emulator and
+macOS native runtime using `--plain-name multi-column`. The prior 422-case native
+run remains recorded above; this follow-up ran the two additions, not the whole
+424-case native entrypoint. Full analysis remains at 92 existing findings, with
+none in the changed test file. No production code changed in this follow-up.
