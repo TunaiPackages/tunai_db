@@ -239,6 +239,9 @@ The [field-type/default matrix](FIELD_TYPE_MATRIX.md) adds 345 shared host/nativ
 cases covering all type pairs, default addition/change/removal, numeric and text
 boundaries, rollback, recovery and reopening.
 
+The [foreign-key matrix](FOREIGN_KEY_MATRIX.md) covers 70 populated relationship
+changes with enforcement enabled and disabled, including post-upgrade writes.
+
 ## Branch transition
 
 Historically Tunaipos pinned the production branch. Main contained an older API.

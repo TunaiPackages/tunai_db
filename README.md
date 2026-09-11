@@ -160,3 +160,6 @@ visible as failures.
 The [field-type matrix](docs/FIELD_TYPE_MATRIX.md) adds 345 automated cases for
 all type transitions, default lifecycles, value boundaries and recovery, shared
 between the host and native test runners.
+
+The [foreign-key matrix](docs/FOREIGN_KEY_MATRIX.md) adds 70 populated-database
+cases for relationship changes, integrity, rollback and last-resort recovery.
