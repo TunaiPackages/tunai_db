@@ -1,0 +1,9 @@
+{"version": "3.8.10.2", "exit_code": 0, "log": "/tmp/tunai-scoped-sqlite/3.8.10.2/scoped_test.log"}
+{"version": "3.9.2", "exit_code": 0, "log": "/tmp/tunai-scoped-sqlite/3.9.2/scoped_test.log"}
+{"version": "3.18.0", "exit_code": 0, "log": "/tmp/tunai-scoped-sqlite/3.18.0/scoped_test.log"}
+{"version": "3.22.0", "exit_code": 0, "log": "/tmp/tunai-scoped-sqlite/3.22.0/scoped_test.log"}
+{"version": "3.24.0", "exit_code": 0, "log": "/tmp/tunai-scoped-sqlite/3.24.0/scoped_test.log"}
+{"version": "3.25.3", "exit_code": 0, "log": "/tmp/tunai-scoped-sqlite/3.25.3/scoped_test.log"}
+{"version": "3.28.0", "exit_code": 0, "log": "/tmp/tunai-scoped-sqlite/3.28.0/scoped_test.log"}
+{"version": "3.32.2", "exit_code": 0, "log": "/tmp/tunai-scoped-sqlite/3.32.2/scoped_test.log"}
+{"version": "3.39.4", "exit_code": 0, "log": "/tmp/tunai-scoped-sqlite/3.39.4/scoped_test.log"}
