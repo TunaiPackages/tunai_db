@@ -245,11 +245,13 @@ void registerFieldTypeMatrix(
                     expect(
                         await _open(init, model),
                         losesValue
-                            ? DBInitializationResult.rebuilt
+                            ? DBInitializationResult.tablesRebuilt
                             : DBInitializationResult.ready);
                     if (losesValue) {
                       expect(await _rows(init.database), isEmpty);
-                      expect(await init.database.query('sentinel'), isEmpty);
+                      expect(await init.database.query('sentinel'), [
+                        {'id': 99}
+                      ]);
                     } else {
                       // Numeric INTEGER/REAL storage may change only with exact value preservation.
                       expect(

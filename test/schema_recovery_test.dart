@@ -80,9 +80,10 @@ void main() {
       ]);
       expect(
         await initializer.initDatabase('test'),
-        DBInitializationResult.rebuilt,
+        DBInitializationResult.tablesRebuilt,
       );
       expect(initializer.hasInit, isTrue);
+      expect(initializer.rebuiltTables, {'items'});
       expect(await initializer.database.query('items'), isEmpty);
       expect(
         await initializer.database.query(
@@ -105,6 +106,7 @@ void main() {
         await initializer.initDatabase('test'),
         DBInitializationResult.ready,
       );
+      expect(initializer.rebuiltTables, isEmpty);
       expect((await initializer.database.query('items')).single['id'], 2);
     },
   );
@@ -164,6 +166,7 @@ void main() {
         db,
         [schema(), schema()],
         recoverIncompatibleSchema: true,
+        completeRegistry: true,
         logRecovery: events.add,
       ),
       throwsArgumentError,
@@ -184,6 +187,7 @@ void main() {
         db,
         [schema()],
         recoverIncompatibleSchema: true,
+        completeRegistry: true,
         logRecovery: events.add,
       ),
       throwsA(isA<DatabaseException>()),
@@ -212,9 +216,10 @@ void main() {
           db,
           [target],
           recoverIncompatibleSchema: true,
+          completeRegistry: true,
           logRecovery: events.add,
         ),
-        DBInitializationResult.rebuilt,
+        DBInitializationResult.tablesRebuilt,
       );
       expect(await db.query('items'), isEmpty);
       expect(
@@ -222,9 +227,9 @@ void main() {
         1,
       );
       expect(events, [
-        'schema_recovery: new_key; rebuilding',
-        'schema_recovery: replacement_committed',
-        'schema_recovery: rebuilt_empty_database',
+        'schema_recovery: key_change; rebuilding_tables=items',
+        'schema_recovery: tables_replacement_committed',
+        'schema_recovery: rebuilt_empty_tables=items',
       ]);
     },
   );
@@ -236,8 +241,20 @@ void main() {
     await db.rawQuery('PRAGMA max_page_count=$pages');
     final events = <String>[];
     await expectLater(
-        SchemaReconciler.update(db, [schema()],
-            recoverIncompatibleSchema: true, logRecovery: events.add),
+        SchemaReconciler.update(
+            db,
+            [
+              schema(),
+              const DBTable(tableName: 'unregistered', fields: [
+                DBField(
+                    fieldName: 'secret',
+                    fieldType: DBFieldType.text,
+                    isNotNull: false)
+              ])
+            ],
+            recoverIncompatibleSchema: true,
+            completeRegistry: true,
+            logRecovery: events.add),
         throwsA(isA<DatabaseException>()));
     expect(events, isEmpty);
     expect((await db.query('items')).single['value'], isNull);
@@ -344,8 +361,8 @@ void main() {
       ])
     ]);
     await db.close();
-    expect(
-        await initializer.initDatabase('test'), DBInitializationResult.rebuilt);
+    expect(await initializer.initDatabase('test'),
+        DBInitializationResult.tablesRebuilt);
     expect(await initializer.database.query('items'), isEmpty);
     expect(
         (await initializer.database.rawQuery('PRAGMA table_info(items)'))

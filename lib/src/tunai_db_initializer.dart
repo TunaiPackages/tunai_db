@@ -69,6 +69,12 @@ class TunaiDBInitializer {
     _database = database;
   }
 
+  Set<String> _rebuiltTables = const {};
+
+  /// Tables emptied by the last successful scoped recovery. Empty for ready,
+  /// explicit reset, whole-database recovery, or failed initialization.
+  Set<String> get rebuiltTables => _rebuiltTables;
+
   /// Reconciles first, then rebuilds empty schema only for known incompatibility.
   /// Call with the complete registry and quiesce all database users first.
   /// Selected-table updateTables calls never rebuild the whole database.
@@ -81,6 +87,7 @@ class TunaiDBInitializer {
   }) =>
       _initializationLock.synchronized(() async {
         _preparing = true;
+        _rebuiltTables = const {};
         final tables = List<DBTable>.of(_allTables);
         final triggers = List<DBTrigger>.of(_allTriggers);
         try {
@@ -101,11 +108,13 @@ class TunaiDBInitializer {
               completeRegistry: true,
               recoverIncompatibleSchema: readOnly != true && tables.isNotEmpty,
               logRecovery: _logRecovery,
+              onTablesRebuilt: (names) => _rebuiltTables = names,
             );
           }
           _isSupportUpsert = await _isSqliteVersionSupportUpsert(_database!);
           return resetDB ? DBInitializationResult.reset : result;
         } catch (error, stack) {
+          _rebuiltTables = const {};
           _logRecovery(
             'schema_initialization: failed; category=${error.runtimeType}',
           );

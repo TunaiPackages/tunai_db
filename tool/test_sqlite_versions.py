@@ -71,7 +71,7 @@ void main() {{
             result = subprocess.run(['flutter', 'test', 'test/engine_version_test.dart',
                 'test/column_conversion_test.dart', 'test/field_type_matrix_test.dart',
                 'test/foreign_key_matrix_test.dart', 'test/write_fallback_test.dart',
-                'test/schema_reconciliation_test.dart', 'test/schema_recovery_test.dart',
+                'test/schema_reconciliation_test.dart', 'test/schema_recovery_test.dart', 'test/scoped_recovery_test.dart',
                 *(['--name', '^(?!.*preserves hidden rowids, generated columns and STRICT table options).*$']
                   if tuple(map(int, version.split('.'))) < (3, 37, 0) else [])],
                 cwd=project, stdout=stream, stderr=subprocess.STDOUT)

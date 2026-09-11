@@ -35,8 +35,8 @@ def invoke(folder, mode, rows, journal, phase='', expected='old', recovery=False
             peak_journal = max(peak_journal, sum(p.stat().st_size for p in folder.glob('cache.db-*') if p.is_file() and p.suffix != '.json'))
             pidfile = folder / 'worker.pid'
             if pidfile.exists():
-                rss = subprocess.run(['ps', '-o', 'rss=', '-p', pidfile.read_text().strip()], capture_output=True, text=True).stdout.strip()
-                if rss:
+                rss = subprocess.run(['ps', '-o', 'rss=', '-p', pidfile.read_text().strip()], capture_output=True, text=True, errors='replace').stdout.strip()
+                if rss.isdigit():
                     peak_rss = max(peak_rss, int(rss) * 1024)
             marker = folder / 'marker.json'
             if phase and marker.exists() and not killed:

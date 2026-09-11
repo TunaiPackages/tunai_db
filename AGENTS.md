@@ -10,8 +10,8 @@
   default or nullable NULL; preserve other columns and all retained rows. Key
   columns remain strict. Partial repairs preserve objects outside their selection;
   unsupported conversions must roll back. Follow the goal and recovery contract in
-  `docs/AUTOMATIC_SCHEMA_UPDATES.md`: a logged, explicitly reported rebuild to an
-  empty database is the last resort for irreconcilable schema incompatibility,
+  `docs/AUTOMATIC_SCHEMA_UPDATES.md`: a logged, explicitly reported reset of affected tables plus FK dependents
+  precedes whole-database recovery, which is the final resort for irreconcilable schema incompatibility,
   never routine recovery or a catch-all for storage errors. Only full
   initialization with the complete registry may recover this way;
   selected-table repairs must never erase a database. Test both preservation

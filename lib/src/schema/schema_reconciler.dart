@@ -15,6 +15,12 @@ class SchemaIncompatibility extends StateError {
   final String reason;
 }
 
+class _TableFailure {
+  _TableFailure(this.failure, this.tables);
+  final Object failure;
+  final Set<String> tables;
+}
+
 /// Automatic, data-preserving reconciliation of the registered schema.
 /// Call outside transactions, before exposing this connection to app workers.
 abstract final class SchemaReconciler {
@@ -27,7 +33,9 @@ abstract final class SchemaReconciler {
     bool recoverIncompatibleSchema = false,
     bool completeRegistry = false,
     void Function(String)? logRecovery,
+    void Function(Set<String>)? onTablesRebuilt,
   }) {
+    recoverIncompatibleSchema = recoverIncompatibleSchema && completeRegistry;
     final selectedTables = List<DBTable>.of(tables);
     final selectedTriggers = List<DBTrigger>.of(triggers);
     return _lock.synchronized(() async {
@@ -43,6 +51,7 @@ abstract final class SchemaReconciler {
       if (foreignKeys) await db.execute('PRAGMA foreign_keys = OFF');
       var result = DBInitializationResult.ready;
       final migrations = <StoredValueMigration>[];
+      final resetTables = <String>{};
       try {
         await db.execute('PRAGMA legacy_alter_table = ON');
         Future<void> reconcile(Transaction tx) async {
@@ -100,12 +109,21 @@ abstract final class SchemaReconciler {
                 tx, selectedTables, selectedTriggers);
           }
           for (final table in selectedTables) {
-            await _updateTable(tx, table,
-                classifyCopyFailure: recoverIncompatibleSchema,
-                matchModel: completeRegistry,
-                protectedColumns:
-                    protectedColumns[table.tableName.toLowerCase()] ?? const {},
-                migrations: migrations);
+            try {
+              await _updateTable(tx, table,
+                  classifyCopyFailure: recoverIncompatibleSchema,
+                  matchModel: completeRegistry,
+                  protectedColumns:
+                      protectedColumns[table.tableName.toLowerCase()] ??
+                          const {},
+                  migrations: migrations);
+            } catch (failure) {
+              if (!recoverIncompatibleSchema ||
+                  !_canAttemptReplacement(failure)) {
+                rethrow;
+              }
+              throw _TableFailure(failure, {table.tableName.toLowerCase()});
+            }
           }
           for (final trigger in selectedTriggers) {
             final existing = await tx.query(
@@ -125,12 +143,21 @@ abstract final class SchemaReconciler {
             );
             await tx.execute(trigger.toSQL());
           }
-          if ((foreignKeys || completeRegistry) &&
-              (await tx.rawQuery('PRAGMA foreign_key_check')).isNotEmpty) {
-            throw SchemaIncompatibility(
-              'Automatic schema update would leave foreign-key violations',
-              reason: 'foreign_key_violation',
-            );
+          if (foreignKeys || completeRegistry) {
+            final violations = await tx.rawQuery('PRAGMA foreign_key_check');
+            if (violations.isNotEmpty) {
+              final failure = SchemaIncompatibility(
+                'Automatic schema update would leave foreign-key violations',
+                reason: 'foreign_key_violation',
+              );
+              if (recoverIncompatibleSchema) {
+                throw _TableFailure(failure, {
+                  for (final row in violations)
+                    (row['table']! as String).toLowerCase(),
+                });
+              }
+              throw failure;
+            }
           }
         }
 
@@ -163,40 +190,58 @@ abstract final class SchemaReconciler {
           // Keep the writer lock across rollback and replacement. No other
           // handle can insert data between deciding recovery and rebuilding.
           await tx.execute('SAVEPOINT tunai_schema_update');
-          try {
-            await reconcile(tx);
-          } catch (failure) {
-            if (!_canAttemptReplacement(failure)) rethrow;
-            await tx.execute('ROLLBACK TO tunai_schema_update');
-            migrations.clear();
-            logRecovery?.call(
-              'schema_recovery: ${failure is SchemaIncompatibility ? failure.reason : 'legacy_schema_failure'}; rebuilding',
-            );
-            // Replacement stays in this transaction: invalid declarations or
-            // storage failure restore the entire original database.
-            final objects = await tx.query(
-              'sqlite_master',
-              columns: ['type', 'name'],
-              where: "type IN ('trigger', 'view', 'table')",
-            );
-            for (final type in ['trigger', 'view', 'table']) {
-              for (final object in objects.where((o) => o['type'] == type)) {
-                final name = object['name']! as String;
-                if (name.startsWith('sqlite_')) continue;
-                await tx.execute(
-                  'DROP ${type.toUpperCase()} IF EXISTS ${quoteIdentifier(name)}',
-                );
+          while (true) {
+            try {
+              // Every retry starts from the original schema and data. Drop the
+              // full dependent closure before migrating any retained table.
+              for (final name in resetTables) {
+                await tx
+                    .execute('DROP TABLE IF EXISTS ${quoteIdentifier(name)}');
               }
+              await reconcile(tx);
+              if (resetTables.isNotEmpty) {
+                await _verifyReplacement(tx);
+                result = DBInitializationResult.tablesRebuilt;
+              }
+              break;
+            } catch (caught) {
+              final failure = caught is _TableFailure ? caught.failure : caught;
+              if (!_canAttemptReplacement(failure)) rethrow;
+              await tx.execute('ROLLBACK TO tunai_schema_update');
+              migrations.clear();
+              final reason = failure is SchemaIncompatibility
+                  ? failure.reason
+                  : 'legacy_schema_failure';
+              if (caught is _TableFailure && completeRegistry) {
+                final closure = await _dependentTables(
+                    tx, selectedTables, {...resetTables, ...caught.tables});
+                if (closure.length > resetTables.length) {
+                  resetTables.addAll(closure);
+                  logRecovery?.call(
+                      'schema_recovery: $reason; rebuilding_tables=${(resetTables.toList()..sort()).join(',')}');
+                  continue;
+                }
+              }
+              // No bounded table repair can recover this failure. The full
+              // replacement still shares the transaction and rolls back on error.
+              logRecovery?.call('schema_recovery: $reason; rebuilding');
+              final objects = await tx.query('sqlite_master',
+                  columns: ['type', 'name'],
+                  where: "type IN ('trigger', 'view', 'table')");
+              for (final type in ['trigger', 'view', 'table']) {
+                for (final object in objects.where((o) => o['type'] == type)) {
+                  final name = object['name']! as String;
+                  if (name.startsWith('sqlite_')) continue;
+                  await tx.execute(
+                      'DROP ${type.toUpperCase()} IF EXISTS ${quoteIdentifier(name)}');
+                }
+              }
+              await reconcile(tx);
+              await _verifyReplacement(tx);
+              resetTables.clear();
+              result = DBInitializationResult.rebuilt;
+              break;
             }
-            await reconcile(tx);
-            if ((await tx.rawQuery(
-                  'PRAGMA quick_check',
-                ))
-                    .any((r) => r.values.single != 'ok') ||
-                (await tx.rawQuery('PRAGMA foreign_key_check')).isNotEmpty) {
-              throw StateError('Replacement schema verification failed');
-            }
-            result = DBInitializationResult.rebuilt;
           }
           await tx.execute('RELEASE tunai_schema_update');
         }, exclusive: true);
@@ -207,9 +252,14 @@ abstract final class SchemaReconciler {
                 'schema_migration: committed; converted=${migration.converted}; defaulted=${migration.defaulted}; nulled=${migration.nulled}');
           }
         }
+        if (result == DBInitializationResult.tablesRebuilt) {
+          logRecovery?.call('schema_recovery: tables_replacement_committed');
+        }
         if (result == DBInitializationResult.rebuilt) {
           logRecovery?.call('schema_recovery: replacement_committed');
         }
+      } on _TableFailure catch (failure, stack) {
+        Error.throwWithStackTrace(failure.failure, stack);
       } finally {
         try {
           await db.execute(
@@ -222,8 +272,57 @@ abstract final class SchemaReconciler {
       if (result == DBInitializationResult.rebuilt) {
         logRecovery?.call('schema_recovery: rebuilt_empty_database');
       }
+      if (result == DBInitializationResult.tablesRebuilt) {
+        final names = selectedTables
+            .where((t) => resetTables.contains(t.tableName.toLowerCase()))
+            .map((t) => t.tableName)
+            .toSet();
+        onTablesRebuilt?.call(Set.unmodifiable(names));
+        logRecovery?.call(
+            'schema_recovery: rebuilt_empty_tables=${(names.toList()..sort()).join(',')}');
+      }
       return result;
     });
+  }
+
+  static Future<void> _verifyReplacement(Transaction tx) async {
+    if ((await tx.rawQuery('PRAGMA quick_check'))
+            .any((r) => r.values.single != 'ok') ||
+        (await tx.rawQuery('PRAGMA foreign_key_check')).isNotEmpty) {
+      throw StateError('Replacement schema verification failed');
+    }
+  }
+
+  // Union of old and target FK edges, including transitive/cyclic dependents.
+  // Parents and unrelated tables retain their data. Undeclared children are
+  // already scheduled for removal by full reconciliation.
+  static Future<Set<String>> _dependentTables(
+      Transaction tx, List<DBTable> tables, Set<String> roots) async {
+    final registered = {for (final t in tables) t.tableName.toLowerCase()};
+    final children = <String, Set<String>>{};
+    void edge(String parent, String child) => children
+        .putIfAbsent(parent.toLowerCase(), () => <String>{})
+        .add(child.toLowerCase());
+    for (final row in await tx.query('sqlite_master', where: "type='table'")) {
+      final name = row['name']! as String;
+      for (final fk in await tx
+          .rawQuery('PRAGMA foreign_key_list(${quoteIdentifier(name)})')) {
+        edge(fk['table']! as String, name);
+      }
+    }
+    for (final table in tables) {
+      for (final field in table.foreignFields) {
+        edge(field.reference!.table.tableName, table.tableName);
+      }
+    }
+    final result = roots.where(registered.contains).toSet();
+    final pending = result.toList();
+    while (pending.isNotEmpty) {
+      for (final child in children[pending.removeLast()] ?? const <String>{}) {
+        if (registered.contains(child) && result.add(child)) pending.add(child);
+      }
+    }
+    return result;
   }
 
   // Classify the failure of reconciliation, not opening/commit/PRAGMA cleanup.
@@ -314,20 +413,24 @@ abstract final class SchemaReconciler {
     if (signature(current) == signature(target)) return;
     final columns = await _tableColumns(tx, table.tableName);
     final retained = table.fields.map((f) => f.fieldName.toLowerCase()).toSet();
+    final hasRows = (await tx.rawQuery(
+            'SELECT 1 FROM ${quoteIdentifier(table.tableName)} LIMIT 1'))
+        .isNotEmpty;
     for (final field in table.fields.where((f) => f.isPrimaryKey)) {
       final old = columns.where((c) =>
           (c['name']! as String).toLowerCase() ==
           field.fieldName.toLowerCase());
-      if (old.isEmpty || old.single['pk'] != 1) {
+      if (hasRows && (old.isEmpty || old.single['pk'] != 1)) {
         throw SchemaIncompatibility('Cannot infer a new primary key',
             reason: 'key_change');
       }
     }
     for (final column in columns.where((c) => (c['pk']! as int) > 0)) {
-      if (!table.fields.any((f) =>
-          f.fieldName.toLowerCase() ==
-              (column['name']! as String).toLowerCase() &&
-          f.isPrimaryKey)) {
+      if (hasRows &&
+          !table.fields.any((f) =>
+              f.fieldName.toLowerCase() ==
+                  (column['name']! as String).toLowerCase() &&
+              f.isPrimaryKey)) {
         throw SchemaIncompatibility('Cannot infer a changed primary key',
             reason: 'key_change');
       }

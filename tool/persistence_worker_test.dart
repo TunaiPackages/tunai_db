@@ -160,7 +160,7 @@ void main() {
         expect(
             outcome,
             recovery && !migrated
-                ? DBInitializationResult.rebuilt
+                ? DBInitializationResult.tablesRebuilt
                 : DBInitializationResult.ready);
         await _verify(db, rows, true, recovery);
         await _report({
@@ -178,7 +178,7 @@ void main() {
         expect(
             outcome,
             recovery
-                ? DBInitializationResult.rebuilt
+                ? DBInitializationResult.tablesRebuilt
                 : DBInitializationResult.ready);
         active = false;
         await _verify(db, rows, true, recovery);
@@ -212,13 +212,9 @@ Future<void> _verify(Database db, int rows, bool migrated, bool empty) async {
   final count = empty ? 0 : rows;
   expect((await db.rawQuery('SELECT count(*) AS n FROM items')).single['n'],
       count);
-  expect(
-      await db.query('parents'),
-      empty
-          ? []
-          : [
-              {'id': 99, 'tag': 'preserved'}
-            ]);
+  expect(await db.query('parents'), [
+    {'id': 99, 'tag': 'preserved'}
+  ]);
   if (!empty) {
     final value = migrated
         ? "CASE WHEN id%10=0 THEN -1 ELSE id END"

@@ -331,9 +331,11 @@ void registerColumnConversionCases(
                 isEmpty);
             init.setTables([target, _sentinel]);
             expect(await init.initDatabase('conversion'),
-                DBInitializationResult.rebuilt);
+                DBInitializationResult.tablesRebuilt);
             expect(await init.database.query('items'), isEmpty);
-            expect(await init.database.query('sentinel'), isEmpty);
+            expect(await init.database.query('sentinel'), [
+              {'id': 99}
+            ]);
           }));
   register(
       'embedded NULs and unrelated blobs survive native conversion',

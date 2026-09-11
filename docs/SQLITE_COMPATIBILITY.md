@@ -96,3 +96,12 @@ Its system `sqlite3 --version` reported **3.22.0**, source ID
 `2018-12-19 01:30:22 c255889bd95bd5430dc7ced3317011ae2abb483d6c9af883af3dc7d6c2c2alt2`.
 This exercises the pre-table_xinfo fallback through Android's native SQLite driver.
 No physical old handset or every vendor patch was tested.
+
+## Scoped recovery retest
+
+After adding table-scoped recovery, the full compatibility suite and eight
+focused recovery regressions passed on all nine engines listed above, including
+3.8.10.2. Current-engine package tests: 508 passed. The new scoped tests cover
+transitive/cyclic FK closure, independent failures, retained parents/unrelated
+rows, empty primary-key changes and rollback. This retest used desktop engines;
+the earlier Android native results above were not rerun for this change.

@@ -303,26 +303,30 @@ Future<void> _run(_Case scenario, bool enforce) async {
     // Test both the initializer's normal reopen path and restoration of an
     // explicitly enabled connection setting in the shared reconciliation engine.
     final events = <String>[];
+    Set<String> cleared = {};
     final result = enforce
         ? await SchemaReconciler.update(init.database, target,
             completeRegistry: true,
             recoverIncompatibleSchema: true,
-            logRecovery: events.add)
+            logRecovery: events.add,
+            onTablesRebuilt: (names) => cleared = names)
         : await init.initDatabase('matrix');
     expect(
         result,
         scenario.rebuild
-            ? DBInitializationResult.rebuilt
+            ? DBInitializationResult.tablesRebuilt
             : DBInitializationResult.ready);
     if (enforce) {
       expect(await _enforcement(init.database), isTrue);
       expect(events.isNotEmpty, scenario.rebuild);
     }
+    if (!enforce) cleared = init.rebuiltTables;
+    expect(cleared.contains('sentinel'), isFalse);
     final expected = scenario.expected ?? scenario.rows;
     for (final table in target) {
       expect(
           await init.database.query(table.tableName, orderBy: 'id'),
-          scenario.rebuild
+          cleared.contains(table.tableName)
               ? isEmpty
               : table == _sentinel
                   ? [

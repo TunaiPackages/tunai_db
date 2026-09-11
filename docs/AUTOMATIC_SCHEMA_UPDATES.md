@@ -15,12 +15,17 @@ The agreed recovery order is:
 2. Roll back a failed update before deciding recovery. Use supported,
    row-preserving reconciliation and the explicit ordinary-column conversion
    policy below; never guess key mappings or silently truncate numeric values.
-3. Only when a schema incompatibility cannot be reconciled safely, rebuild the
-   affected database from its complete registered schema as a last resort. This
-   replaces its contents with an empty database; other databases are unaffected.
-4. Verify the new tables, indexes and triggers before reporting success. Log the
-   original failure, the fallback decision and its outcome, and explicitly report
-   that the database was rebuilt. The app then handles the empty data itself.
+3. When a failure is confined to registered tables, roll back and rebuild only
+   those tables plus their transitive foreign-key dependents. Use the union of
+   old and target references, including cycles. Parents and unrelated tables
+   retain data. Retry the complete migration atomically; additional independent
+   failures extend the affected set. Never guess key mappings.
+4. Only if scoped recovery cannot produce a valid schema, attempt a verified
+   whole-database rebuild as the final fallback. Storage/locking failures and
+   invalid declarations still propagate without discarding data.
+5. Verify tables, indexes, triggers and foreign keys before commit. Log the
+   reason, affected table names and completion. The app owns repopulating empty
+   tables; TunaiDB has no knowledge of caches versus unsynced business records.
 
 Rebuilding is exceptional, undesirable recovery—not the normal upgrade path or
 a substitute for improving reconciliation. Every rebuild should be diagnosable
@@ -29,7 +34,7 @@ when applicable. Removing a declaration is an intentional schema deletion, handl
 whole-database rebuild whenever possible. Retained rows and column values survive.
 
 A data-preserving **table rebuild** described below copies existing rows into an
-updated table. A last-resort **database rebuild** discards the affected database's
+updated table. A **scoped recovery** empties affected tables and their FK dependents. A last-resort **database rebuild** discards the affected database's
 contents and recreates the registered schema. These are different operations.
 
 Do not turn every exception into a database rebuild. Disk exhaustion, permission
@@ -44,7 +49,7 @@ Recovery must be observable through both logging and an explicit initialization
 outcome distinguishing normal initialization from successful rebuilding. Log
 schema/error categories and recovery stages without stored row values, secrets,
 or application credentials. Initialization returns `DBInitializationResult.ready`,
-`.rebuilt`, or `.reset`
+`.tablesRebuilt`, `.rebuilt`, or `.reset`
 (for an explicit caller-requested reset). A thrown error means initialization
 did not complete; `hasInit` is false and the initializer exposes no handle.
 
@@ -73,17 +78,22 @@ rolls back the whole transaction. Unclassified driver errors, storage/locking
 errors, integrity/corruption errors, opening/commit failures and PRAGMA cleanup
 errors propagate. These are not schema-rebuild signals.
 
-The updater uses a savepoint inside its exclusive update transaction. A recoverable
-legacy schema failure rolls back that attempt, then removes user tables/views/triggers
-and recreates the full registered schema in the same transaction. Indexes are
-recreated from declarations. This is a logical database rebuild, not deletion of
-the database file or its WAL sidecars. Undeclared objects/data are removed during full initialization;
-successful last-resort rebuilding also clears the retained tables. Other database files remain untouched.
+The updater uses a savepoint inside its exclusive update transaction. A
+recoverable table failure rolls back the entire attempt. Each retry starts from
+that original state, drops the affected-table closure, and reconciles the full
+registry. A foreign_key_check violation scopes recovery to the violating child
+and its dependents. Attempts grow monotonically and are bounded by the registry
+size; the same failing set cannot cause an infinite retry loop.
+
+If a failure cannot be scoped or persists after scoped recovery, full replacement
+removes user tables/views/triggers and recreates the registered schema in the
+same transaction. No database file or WAL sidecars are deleted. Any failed
+replacement rolls back to the original data.
 
 Replacement validation includes schema reconciliation, registered triggers,
 `quick_check` and `foreign_key_check`. If replacement fails, the outer transaction
 rolls back the original contents, and initialization closes/invalidates its
-handle. There is one recovery attempt, never a reset loop. Logs distinguish the
+handle. There is a bounded series of scoped attempts and at most one full replacement, never a reset loop. Logs distinguish the
 reason, replacement commit and completed recovery without recording row values.
 If connection cleanup fails after commit, initialization throws and closes the
 handle; the commit log identifies that replacement already happened. Reopening
@@ -91,7 +101,10 @@ must validate again. Recovery does not promise success with broken storage.
 
 ```dart
 final outcome = await initializer.initDatabase(databaseKey);
-if (outcome == DBInitializationResult.rebuilt) {
+if (outcome == DBInitializationResult.tablesRebuilt) {
+  final emptiedTables = initializer.rebuiltTables; // immutable Set<String>
+  // Only these registered tables were cleared. Other tables retained data.
+} else if (outcome == DBInitializationResult.rebuilt) {
   // The consuming app decides how to populate its now-empty database.
 }
 ```
@@ -197,14 +210,14 @@ PRAGMAs must not be changed by other work during this operation.
 ## Boundaries: information the schema cannot supply
 
 The updater never guesses column renames, new row identities, foreign-key
-mappings or key-value substitutions. Primary-key changes report a specific
+mappings or key-value substitutions. Primary-key changes on populated tables report a specific
 incompatibility and roll back the data-preserving attempt. Full initialization
 can update constraints and foreign keys when retained data validates; partial
 repair continues to reject key/relationship and generated-column changes.
 A rowid table that shadows all three SQLite rowid aliases cannot be safely
 rebuilt automatically by the current reconciler. Selected-table repair propagates
-these failures after rollback. Full
-initialization can instead reach the logged last-resort database rebuild above;
+these failures after rollback. An empty table can change primary key without data-loss recovery. Full
+initialization first attempts scoped recovery and only then the database fallback;
 it must never become a silent reset or swallowed error.
 
 The complete registry is authoritative, including when opening a database created
@@ -286,3 +299,18 @@ column-inspection fallbacks and mixed-type foreign-key limitations.
 
 See [persistence stress tests](PERSISTENCE_STRESS.md) for forced process kills,
 journal recovery, large-database measurements and grouped-copy validation.
+
+## Scoped recovery result
+
+`tablesRebuilt` means only the names in `TunaiDBInitializer.rebuiltTables` were
+emptied by recovery. `rebuilt` still means all tables were emptied. The set is
+cleared at the start of every initialization and on failure; normal reopening
+returns `ready` with an empty set. Logs use `rebuilding_tables`,
+`tables_replacement_committed`, and `rebuilt_empty_tables`. Existing callers with
+exhaustive enum switches must handle the new case. Selected-table repairs cannot
+enable destructive recovery even if an internal caller requests it without
+`completeRegistry: true`.
+
+This policy replaces the previous database-wide-only recovery agreement. Empty
+primary-key changes no longer force any data-loss recovery. Table names and
+reasons are logged, never row contents.
