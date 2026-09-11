@@ -141,7 +141,8 @@ selected-table repairs never rebuild the database.
 Register your `DBTable`/`DBTrigger` declarations and await
 `TunaiDBInitializer().initDatabase(outletKey, updateDB: true)` before app queries.
 The updater automatically creates missing schema and reconciles supported
-existing-column changes while preserving rows and unregistered schema. Ordinary
+existing-column changes while preserving retained rows. Full initialization removes
+tables, columns, indexes, triggers and views absent from the complete model. Ordinary
 changes do not require handwritten migrations. Unsafe transformations roll back first; full initialization can then recover
 with a logged, verified empty rebuild. Selected-table repair still propagates
 failures without discarding the database.
@@ -151,7 +152,7 @@ changes, default values, atomic rebuilds, concurrency, and intentional boundarie
 
 ## Runnable regression lab
 
-The [Flutter Test Lab](example/TEST_LAB.md) runs 68 real-database scenarios with
+The [Flutter Test Lab](example/TEST_LAB.md) runs 69 real-database scenarios with
 category filters, crucial-feature checks and JSON reports. It shares its suite
 with automated host and native integration tests and keeps package defects
 visible as failures.

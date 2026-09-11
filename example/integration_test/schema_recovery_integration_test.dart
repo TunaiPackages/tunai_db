@@ -55,7 +55,14 @@ void main() {
           (await initializer.database.query('items')).single['value'],
           isNull,
         );
-        expect(await initializer.database.query('extra'), hasLength(1));
+        expect(
+          await initializer.database.query(
+            'sqlite_master',
+            where: 'name=?',
+            whereArgs: ['extra'],
+          ),
+          isEmpty,
+        );
         await initializer.close();
         initializer.setTables([target(true)]);
         expect(
@@ -79,7 +86,7 @@ void main() {
           await initializer.close();
           expect(
             await initializer.initDatabase('test'),
-            DBInitializationResult.rebuilt,
+            DBInitializationResult.ready,
           );
           expect(await initializer.database.query('items'), isEmpty);
           await initializer.database.insert('items', {'id': 3});

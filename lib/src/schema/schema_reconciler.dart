@@ -22,6 +22,7 @@ abstract final class SchemaReconciler {
     List<DBTable> tables, {
     List<DBTrigger> triggers = const [],
     bool recoverIncompatibleSchema = false,
+    bool completeRegistry = false,
     void Function(String)? logRecovery,
   }) {
     final selectedTables = List<DBTable>.of(tables);
@@ -48,9 +49,39 @@ abstract final class SchemaReconciler {
               selectedTables.length) {
             throw StateError('Duplicate registered table names');
           }
+          if (completeRegistry) {
+            for (final table in selectedTables) {
+              if (table.fields.isEmpty ||
+                  table.fields
+                          .map((f) => f.fieldName.toLowerCase())
+                          .toSet()
+                          .length !=
+                      table.fields.length) {
+                throw ArgumentError('Invalid registered fields');
+              }
+              for (final field in table.foreignFields) {
+                final reference = field.reference!;
+                final parents = selectedTables
+                    .where((t) => t.tableName == reference.table.tableName);
+                if (parents.isEmpty ||
+                    !parents.single.fields.any((f) =>
+                        f.fieldName == reference.fieldName && f.isPrimaryKey)) {
+                  throw ArgumentError(
+                      'Foreign key must reference a registered primary key');
+                }
+              }
+            }
+            if (selectedTriggers.any((t) =>
+                !selectedTables.any((table) => table.tableName == t.table))) {
+              throw ArgumentError('Trigger must target a registered table');
+            }
+            await _removeUndeclaredObjects(
+                tx, selectedTables, selectedTriggers);
+          }
           for (final table in selectedTables) {
             await _updateTable(tx, table,
-                classifyCopyFailure: recoverIncompatibleSchema);
+                classifyCopyFailure: recoverIncompatibleSchema,
+                matchModel: completeRegistry);
           }
           for (final trigger in selectedTriggers) {
             final existing = await tx.query(
@@ -70,7 +101,7 @@ abstract final class SchemaReconciler {
             );
             await tx.execute(trigger.toSQL());
           }
-          if (foreignKeys &&
+          if ((foreignKeys || completeRegistry) &&
               (await tx.rawQuery('PRAGMA foreign_key_check')).isNotEmpty) {
             throw SchemaIncompatibility(
               'Automatic schema update would leave foreign-key violations',
@@ -177,8 +208,91 @@ abstract final class SchemaReconciler {
         failure is UnsupportedError;
   }
 
+  // Only full initialization owns the database-wide registry. Partial repairs
+  // cannot infer that objects outside their selection have been removed.
+  static Future<void> _removeUndeclaredObjects(
+      Transaction tx, List<DBTable> tables, List<DBTrigger> triggers) async {
+    final names = tables.map((t) => t.tableName.toLowerCase()).toSet();
+    final objects = await tx.query('sqlite_master',
+        where: "type IN ('trigger', 'view', 'index', 'table')");
+    for (final type in ['trigger', 'view', 'index', 'table']) {
+      for (final object in objects.where((o) => o['type'] == type)) {
+        final name = object['name']! as String;
+        if (name.toLowerCase().startsWith('sqlite_')) continue;
+        if (type == 'table' && names.contains(name.toLowerCase())) continue;
+        if (type == 'trigger' &&
+            triggers.any((t) =>
+                t.name == name &&
+                normalizeTriggerSql(t.toSQL()) ==
+                    normalizeTriggerSql(object['sql']! as String))) {
+          continue;
+        }
+        if (type == 'index') {
+          final owners = tables.where((t) => t.tableName == object['tbl_name']);
+          if (owners.isNotEmpty) {
+            final fields = owners.single.indexingFields.where((f) =>
+                '${owners.single.tableName}_${f.fieldName}_index' == name);
+            if (fields.isNotEmpty) {
+              final details = await tx.rawQuery(
+                  'PRAGMA index_list(${quoteIdentifier(owners.single.tableName)})');
+              final info = await tx
+                  .rawQuery('PRAGMA index_xinfo(${quoteIdentifier(name)})');
+              final keys = info.where((c) => c['key'] == 1).toList();
+              final index = details.singleWhere((i) => i['name'] == name);
+              if (index['unique'] == 0 &&
+                  index['partial'] == 0 &&
+                  keys.length == 1 &&
+                  keys.single['name'] == fields.single.fieldName &&
+                  keys.single['desc'] == 0 &&
+                  keys.single['coll'] == 'BINARY') {
+                continue;
+              }
+            }
+          }
+        }
+        await tx.execute(
+            'DROP ${type.toUpperCase()} IF EXISTS ${quoteIdentifier(name)}');
+      }
+    }
+  }
+
+  static Future<void> _matchTable(Transaction tx, DBTable table, String sql,
+      {required bool classifyCopyFailure}) async {
+    final current = TableDefinition(sql);
+    final target = TableDefinition(table.createTableQuery);
+    String signature(TableDefinition d) =>
+        normalizeTriggerSql('${d.parts.join(',')} ${d.suffix}');
+    if (signature(current) == signature(target)) return;
+    final columns = await tx
+        .rawQuery('PRAGMA table_xinfo(${quoteIdentifier(table.tableName)})');
+    final retained = table.fields.map((f) => f.fieldName.toLowerCase()).toSet();
+    for (final field in table.fields.where((f) => f.isPrimaryKey)) {
+      final old = columns.where((c) =>
+          (c['name']! as String).toLowerCase() ==
+          field.fieldName.toLowerCase());
+      if (old.isEmpty || old.single['pk'] != 1) {
+        throw SchemaIncompatibility('Cannot infer a new primary key',
+            reason: 'key_change');
+      }
+    }
+    for (final column in columns.where((c) => (c['pk']! as int) > 0)) {
+      if (!table.fields.any((f) =>
+          f.fieldName.toLowerCase() ==
+              (column['name']! as String).toLowerCase() &&
+          f.isPrimaryKey)) {
+        throw SchemaIncompatibility('Cannot infer a changed primary key',
+            reason: 'key_change');
+      }
+    }
+    await _rebuild(tx, table.tableName, target, columns,
+        classifyCopyFailure: classifyCopyFailure,
+        retainedColumns: retained,
+        sourceWithoutRowid:
+            current.suffix.toUpperCase().contains('WITHOUT ROWID'));
+  }
+
   static Future<void> _updateTable(Transaction tx, DBTable table,
-      {bool classifyCopyFailure = false}) async {
+      {bool classifyCopyFailure = false, bool matchModel = false}) async {
     if (table.fields.isEmpty ||
         table.fields.map((f) => f.fieldName.toLowerCase()).toSet().length !=
             table.fields.length) {
@@ -189,11 +303,14 @@ abstract final class SchemaReconciler {
     final existing = await tx.query(
       'sqlite_master',
       columns: ['sql'],
-      where: 'type = ? AND name = ?',
+      where: 'type = ? AND name = ? COLLATE NOCASE',
       whereArgs: ['table', table.tableName],
     );
     if (existing.isEmpty) {
       await tx.execute(table.createTableQuery);
+    } else if (matchModel) {
+      await _matchTable(tx, table, existing.single['sql']! as String,
+          classifyCopyFailure: classifyCopyFailure);
     } else {
       final sql = existing.single['sql']! as String;
       final definition = TableDefinition(sql);
@@ -347,6 +464,8 @@ abstract final class SchemaReconciler {
     TableDefinition definition,
     List<Map<String, Object?>> columns, {
     bool classifyCopyFailure = false,
+    Set<String>? retainedColumns,
+    bool sourceWithoutRowid = false,
   }) async {
     var temp = '${name}__tunai_update';
     while ((await tx.query(
@@ -367,15 +486,23 @@ abstract final class SchemaReconciler {
     final withoutRowid = definition.suffix.toUpperCase().contains(
           'WITHOUT ROWID',
         );
-    final physicalNames = columns.map((c) => c['name']! as String).toList();
+    final allNames = columns.map((c) => c['name']! as String).toList();
+    final physicalNames = allNames
+        .where((n) =>
+            retainedColumns == null ||
+            retainedColumns.contains(n.toLowerCase()))
+        .toList();
     final writable = columns
-        .where((c) => c['hidden'] == 0)
+        .where((c) =>
+            (c['hidden'] == 0 || retainedColumns != null) &&
+            physicalNames.contains(c['name']))
         .map((c) => c['name']! as String)
         .toList();
     String? rowid;
-    if (!withoutRowid) {
+    if (!withoutRowid && !sourceWithoutRowid) {
       for (final alias in ['rowid', '_rowid_', 'oid']) {
-        if (!physicalNames.any((n) => n.toLowerCase() == alias)) {
+        if (![...allNames, ...?retainedColumns]
+            .any((n) => n.toLowerCase() == alias)) {
           rowid = alias;
           break;
         }
@@ -440,12 +567,14 @@ abstract final class SchemaReconciler {
     final join = keys
         .map((k) => 'a.${quoteIdentifier(k)} IS b.${quoteIdentifier(k)}')
         .join(' AND ');
-    final different = physicalNames
-        .map(
-          (c) =>
-              '+a.${quoteIdentifier(c)} IS NOT +b.${quoteIdentifier(c)} COLLATE BINARY',
-        )
-        .join(' OR ');
+    final different = physicalNames.isEmpty
+        ? '0'
+        : physicalNames
+            .map(
+              (c) =>
+                  '+a.${quoteIdentifier(c)} IS NOT +b.${quoteIdentifier(c)} COLLATE BINARY',
+            )
+            .join(' OR ');
     if (oldCount != newCount ||
         (await tx.rawQuery(
           'SELECT 1 FROM $source a LEFT JOIN $target b ON $join WHERE b.${quoteIdentifier(keys.first)} IS NULL OR ($different) LIMIT 1',

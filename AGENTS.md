@@ -4,7 +4,9 @@
 - Read `docs/AUTOMATIC_SCHEMA_UPDATES.md` before changing initialization or schema
   handling. DBTable/DBField declarations drive automatic updates; ordinary
   schema changes must not require handwritten application migrations.
-- Preserve existing values and unregistered schema during reconciliation; unsafe
+- Full initialization must match the complete registered model: remove undeclared
+  tables, columns, indexes, triggers and views, preserving retained values.
+  Partial repairs preserve objects outside their selection; unsafe
   conversions must roll back. Follow the goal and recovery contract in
   `docs/AUTOMATIC_SCHEMA_UPDATES.md`: a logged, explicitly reported rebuild to an
   empty database is the last resort for irreconcilable schema incompatibility,

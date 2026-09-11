@@ -98,6 +98,7 @@ class TunaiDBInitializer {
               _database!,
               tables,
               triggers: triggers,
+              completeRegistry: true,
               recoverIncompatibleSchema: readOnly != true && tables.isNotEmpty,
               logRecovery: _logRecovery,
             );

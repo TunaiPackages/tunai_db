@@ -41,6 +41,67 @@ Future<void> _legacy(
 
 List<LabCase> schemaCases() => [
   LabCase(
+    'schema-exact-model',
+    'Schema updates',
+    'Removed tables, columns, indexes and triggers disappear; kept rows survive',
+    (f) async {
+      await _legacy(f);
+      await f.raw.insert('probe', {'id': 1, 'value': 7});
+      await f.raw.execute('ALTER TABLE probe ADD COLUMN obsolete TEXT');
+      await f.raw.execute('CREATE TABLE removed(id INTEGER)');
+      await f.raw.execute('INSERT INTO removed VALUES(1)');
+      await f.raw.execute('CREATE INDEX obsolete_index ON probe(obsolete)');
+      await f.raw.execute(
+        'CREATE VIEW obsolete_view AS SELECT obsolete FROM probe',
+      );
+      await f.raw.execute(
+        'CREATE TRIGGER obsolete_trigger AFTER INSERT ON probe BEGIN UPDATE probe SET obsolete=1; END',
+      );
+      await f.reopen([_schema()]);
+      equal(await f.raw.query('probe'), [
+        {'id': 1, 'value': 7},
+      ], 'Retained data');
+      final objects = await f.raw.query(
+        'sqlite_master',
+        where: "name NOT LIKE 'sqlite_%'",
+        orderBy: 'name',
+      );
+      equal(objects.map((o) => o['name']).toList(), [
+        'probe',
+        'probe_value_index',
+      ], 'Exact declared objects');
+      final version = (await f.raw.rawQuery('PRAGMA schema_version')).single;
+      await f.reopen([_schema()]);
+      equal(
+        (await f.raw.rawQuery('PRAGMA schema_version')).single,
+        version,
+        'Idempotent reopening',
+      );
+      await f.reopen([
+        const DBTable(
+          tableName: 'probe',
+          fields: [
+            _id,
+            DBField(
+              fieldName: 'value',
+              fieldType: DBFieldType.integer,
+              defaultValue: 0,
+            ),
+          ],
+        ),
+      ]);
+      equal(
+        await f.raw.rawQuery('PRAGMA index_list(probe)'),
+        [],
+        'Indexing disabled',
+      );
+      equal(await f.raw.query('probe'), [
+        {'id': 1, 'value': 7},
+      ], 'Rows survive index removal');
+    },
+    crucial: true,
+  ),
+  LabCase(
     'schema-legacy-color',
     'Schema updates',
     'Legacy appointment color default upgrades without losing rows',
@@ -71,7 +132,7 @@ List<LabCase> schemaCases() => [
       );
       await f.reopen([table]);
       equal(await f.raw.query('base_appt'), [
-        {'bookID': 42, 'colorID': 7, 'notes': null},
+        {'bookID': 42, 'colorID': 7},
       ], 'Existing appointment retained');
       await f.raw.insert('base_appt', {'bookID': 43});
       equal(

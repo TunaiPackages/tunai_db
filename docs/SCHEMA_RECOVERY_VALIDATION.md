@@ -1,11 +1,38 @@
 # Schema recovery validation — 11 September 2026
 
-This revision broadens last-resort recovery beyond individually recognized
+The earlier revision (`2bcc12f`) broadens last-resort recovery beyond individually recognized
 incompatibilities to unsupported legacy parser/SQL shapes. Target replacement
 must validate in the same transaction before original contents are discarded.
 No consuming-app dependency pins, customer databases or remote branches changed.
 
-## Behavior verified
+## Model-authoritative follow-up
+
+Full initialization now removes undeclared tables, columns, indexes, triggers and
+views while retaining compatible rows. It reconstructs tables from model SQL,
+including removal of undeclared constraints, and validates the complete foreign-key
+registry. Partial repairs keep their conservative scope.
+
+The new regression covers populated deletions, index disabling/conflict repair,
+idempotent reopening, transaction rollback, an empty complete registry, key-change
+fallback, invalid references, and related-row preservation without delete cascades.
+The runnable lab adds a matching removal scenario (69 database scenarios total).
+Quoted legacy columns now reconcile without resetting, and obsolete views are
+removed directly. The old behavior below is historical, not the current policy.
+
+Validation for this follow-up is recorded separately from the earlier exhaustive
+simulator matrix. No consuming app or customer database was used.
+
+- Package tests: **76 passed**.
+- Example host tests: **74 passed** (69 database scenarios + five runner/UI tests).
+- Combined native suite: **passed on macOS 26.4.1, iPad mini/iOS 26.4 and
+  Pixel 6a/Android API 36** (69 scenarios + recovery/reopen flow on each).
+- Focused changed-code analysis: **no issues**. Whole-package analysis retains
+  **92 pre-existing findings** in untouched files.
+- This follow-up did **not** rerun the full 27-iOS/two-Android matrix below.
+- Case-only column spelling preservation is additionally covered by a host
+  regression after the native runs; no physical-device or power-loss tests.
+
+## Earlier behavior verified
 
 - Compatible populated updates preserve rows and unknown schema.
 - Incompatible nullability/key changes produce verified empty registered schema.
