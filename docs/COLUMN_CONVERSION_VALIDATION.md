@@ -22,7 +22,8 @@ updates do not rewrite old values. Selected-table repairs remain strict.
 
 ## Copy and verification
 
-Rows are copied in batches of 256 under one transaction. Unchanged values stay
+Rows are copied in groups of up to 256 under one transaction, limited by the
+older 999-parameter budget. Each group uses one INSERT statement. Unchanged values stay
 inside SQLite rather than being decoded and re-encoded through the platform
 adapter. Changed text is read and written as bytes with explicit SQLite TEXT casts,
 avoiding the native adapter's embedded-NUL truncation. Text primary-key cursors are also transported as bytes. The updater

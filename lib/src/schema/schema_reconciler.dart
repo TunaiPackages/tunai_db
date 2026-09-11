@@ -620,13 +620,31 @@ abstract final class SchemaReconciler {
               "CASE WHEN typeof($column)='text' THEN CAST($column AS BLOB) ELSE $column END AS _tunai_value$i");
           projections.add('typeof($column) AS _tunai_kind$i');
         }
-        final expressions = writable
-            .map((c) => migration.fields.containsKey(c)
-                ? (migration.fields[c]!.fieldType.query == 'TEXT'
-                    ? 'CAST(? AS TEXT)'
-                    : '?')
-                : quoteIdentifier(c))
+        final expressions = writable.map((c) {
+          final index = changed.indexOf(c);
+          return index < 0
+              ? 's.${quoteIdentifier(c)}'
+              : 'v.${quoteIdentifier('_c$index')}';
+        }).join(', ');
+        final convertedParameters = changed
+            .map((c) => migration.fields[c]!.fieldType.query == 'TEXT'
+                ? 'CAST(? AS TEXT)'
+                : '?')
             .join(', ');
+        // Older Android engines allow 999 parameters per statement. One
+        // statement per group reduces repeated statement-journal cleanup on
+        // large savepoints while retaining the single atomic transaction.
+        final capacity = 999 ~/ (changed.length + 1);
+        final groupSize = capacity < 1
+            ? 1
+            : capacity > 256
+                ? 256
+                : capacity;
+        final valuesName = quoteIdentifier('${temp}_values');
+        final valueColumns = [
+          quoteIdentifier('_key'),
+          for (var i = 0; i < changed.length; i++) quoteIdentifier('_c$i')
+        ].join(', ');
         Object? cursor;
         var cursorIsText = false;
         while (true) {
@@ -637,9 +655,10 @@ abstract final class SchemaReconciler {
                   ? null
                   : '${quoteIdentifier(key)} > ${cursorIsText ? 'CAST(? AS TEXT)' : '?'}',
               whereArgs: cursor == null ? null : [cursor],
-              limit: 256);
+              limit: groupSize);
           if (rows.isEmpty) break;
-          final batch = tx.batch();
+          final bindings = <Object?>[];
+          final valueRows = <String>[];
           for (final original in rows) {
             final values = <String, Object?>{};
             for (var i = 0; i < changed.length; i++) {
@@ -667,27 +686,29 @@ abstract final class SchemaReconciler {
               values[changed[i]] = value;
             }
             migration.apply(values);
-            // Unchanged values never cross the platform adapter or Dart codec.
-            batch.rawInsert(
-                "INSERT INTO $target ($fields) SELECT $expressions FROM $source WHERE ${quoteIdentifier(key)} = ${original['_tunai_key_kind'] == 'text' ? 'CAST(? AS TEXT)' : '?'}",
-                [
-                  ...changed.map((c) {
-                    final value = values[c];
-                    if (value is! String) return value;
-                    if (encoding == 'UTF-8') {
-                      return Uint8List.fromList(utf8.encode(value));
-                    }
-                    final bytes = ByteData(value.length * 2);
-                    for (var i = 0; i < value.length; i++) {
-                      bytes.setUint16(i * 2, value.codeUnitAt(i),
-                          encoding == 'UTF-16le' ? Endian.little : Endian.big);
-                    }
-                    return bytes.buffer.asUint8List();
-                  }),
-                  original['_tunai_key']
-                ]);
+            valueRows.add(
+                "(${original['_tunai_key_kind'] == 'text' ? 'CAST(? AS TEXT)' : '?'}, $convertedParameters)");
+            bindings.add(original['_tunai_key']);
+            bindings.addAll(changed.map((c) {
+              final value = values[c];
+              if (value is! String) return value;
+              if (encoding == 'UTF-8') {
+                return Uint8List.fromList(utf8.encode(value));
+              }
+              final bytes = ByteData(value.length * 2);
+              for (var i = 0; i < value.length; i++) {
+                bytes.setUint16(i * 2, value.codeUnitAt(i),
+                    encoding == 'UTF-16le' ? Endian.little : Endian.big);
+              }
+              return bytes.buffer.asUint8List();
+            }));
           }
-          await batch.commit(noResult: true);
+          // Unchanged values never cross the platform adapter or Dart codec.
+          await tx.rawInsert(
+              'WITH $valuesName ($valueColumns) AS (VALUES ${valueRows.join(', ')}) '
+              'INSERT INTO $target ($fields) SELECT $expressions '
+              'FROM $valuesName v JOIN $source s ON s.${quoteIdentifier(key)} = v.${quoteIdentifier('_key')}',
+              bindings);
           cursor = rows.last['_tunai_key'];
           cursorIsText = rows.last['_tunai_key_kind'] == 'text';
         }

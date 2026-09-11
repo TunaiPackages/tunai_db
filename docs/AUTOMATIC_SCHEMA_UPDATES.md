@@ -283,3 +283,6 @@ The production branch itself is not advanced by this change.
 
 See [SQLite compatibility](SQLITE_COMPATIBILITY.md) for historical-engine tests,
 column-inspection fallbacks and mixed-type foreign-key limitations.
+
+See [persistence stress tests](PERSISTENCE_STRESS.md) for forced process kills,
+journal recovery, large-database measurements and grouped-copy validation.
