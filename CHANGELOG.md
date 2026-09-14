@@ -8,6 +8,13 @@
 
 ## Unreleased
 
+- Recover incompatible full-registry updates by clearing only affected tables
+  and their old/target foreign-key dependent closure before considering a full
+  database reset. Preserve unrelated rows and atomically roll back failed repair.
+- Add `DBInitializationResult.tablesRebuilt` and `initializer.rebuiltTables`.
+  Callers with exhaustive result switches must handle the new enum case.
+- Permit primary-key changes on empty tables without data-loss recovery.
+
 - Bring the existing production API into main so consumers can pin main commits.
 - Make updateDB automatically reconcile defaults, nullability and value-preserving
   type changes, with atomic rollback and no per-app migration scripts.
@@ -21,3 +28,5 @@
 ## 0.0.1
 
 * TODO: Describe initial release.
+
+- Add correlated initialization lifecycle, engine, recovery and failure diagnostics; protect every initialization log call from sink failures.

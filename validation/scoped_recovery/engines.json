@@ -1,0 +1,110 @@
+[
+  {
+    "version": "3.18.0",
+    "source": "https://sqlite.org/2017/sqlite-amalgamation-3180000.zip",
+    "archive_sha256": "1cfb91106650a12840e107db29f2ec4afe3d7f9dc5936770ef53bc3eb6387b6e",
+    "exit_code": 0,
+    "log": "/private/tmp/tunai-scoped-sqlite/3.18.0/test.log",
+    "scoped": {
+      "version": "3.18.0",
+      "exit_code": 0,
+      "log": "/tmp/tunai-scoped-sqlite/3.18.0/scoped_test.log"
+    }
+  },
+  {
+    "version": "3.22.0",
+    "source": "https://sqlite.org/2018/sqlite-amalgamation-3220000.zip",
+    "archive_sha256": "0db7cb47613475c5060ce47ad24dc73875cddeda4d13196ab3a98b356326ac72",
+    "exit_code": 0,
+    "log": "/private/tmp/tunai-scoped-sqlite/3.22.0/test.log",
+    "scoped": {
+      "version": "3.22.0",
+      "exit_code": 0,
+      "log": "/tmp/tunai-scoped-sqlite/3.22.0/scoped_test.log"
+    }
+  },
+  {
+    "version": "3.24.0",
+    "source": "https://sqlite.org/2018/sqlite-amalgamation-3240000.zip",
+    "archive_sha256": "ad68c1216c3a474cf360c7581a4001e952515b3649342100f2d7ca7c8e313da6",
+    "exit_code": 0,
+    "log": "/private/tmp/tunai-scoped-sqlite/3.24.0/test.log",
+    "scoped": {
+      "version": "3.24.0",
+      "exit_code": 0,
+      "log": "/tmp/tunai-scoped-sqlite/3.24.0/scoped_test.log"
+    }
+  },
+  {
+    "version": "3.25.3",
+    "source": "https://sqlite.org/2018/sqlite-amalgamation-3250300.zip",
+    "archive_sha256": "2ad5379f3b665b60599492cc8a13ac480ea6d819f91b1ef32ed0e1ad152fafef",
+    "exit_code": 0,
+    "log": "/private/tmp/tunai-scoped-sqlite/3.25.3/test.log",
+    "scoped": {
+      "version": "3.25.3",
+      "exit_code": 0,
+      "log": "/tmp/tunai-scoped-sqlite/3.25.3/scoped_test.log"
+    }
+  },
+  {
+    "version": "3.28.0",
+    "source": "https://sqlite.org/2019/sqlite-amalgamation-3280000.zip",
+    "archive_sha256": "d02fc4e95cfef672b45052e221617a050b7f2e20103661cda88387349a9b1327",
+    "exit_code": 0,
+    "log": "/private/tmp/tunai-scoped-sqlite/3.28.0/test.log",
+    "scoped": {
+      "version": "3.28.0",
+      "exit_code": 0,
+      "log": "/tmp/tunai-scoped-sqlite/3.28.0/scoped_test.log"
+    }
+  },
+  {
+    "version": "3.32.2",
+    "source": "https://sqlite.org/2020/sqlite-amalgamation-3320200.zip",
+    "archive_sha256": "7e1ebd182a61682f94b67df24c3e6563ace182126139315b659f25511e2d0b5d",
+    "exit_code": 0,
+    "log": "/private/tmp/tunai-scoped-sqlite/3.32.2/test.log",
+    "scoped": {
+      "version": "3.32.2",
+      "exit_code": 0,
+      "log": "/tmp/tunai-scoped-sqlite/3.32.2/scoped_test.log"
+    }
+  },
+  {
+    "version": "3.39.4",
+    "source": "https://sqlite.org/2022/sqlite-amalgamation-3390400.zip",
+    "archive_sha256": "9c99955b21d2374f3a385d67a1f64cbacb1d4130947473d25c77ad609c03b4cd",
+    "exit_code": 0,
+    "log": "/private/tmp/tunai-scoped-sqlite/3.39.4/test.log",
+    "scoped": {
+      "version": "3.39.4",
+      "exit_code": 0,
+      "log": "/tmp/tunai-scoped-sqlite/3.39.4/scoped_test.log"
+    }
+  },
+  {
+    "version": "3.8.10.2",
+    "source": "https://sqlite.org/2015/sqlite-amalgamation-3081002.zip",
+    "archive_sha256": "8272ba79711bf7f64a029d5976ce565ef3fb9bdbbb8b18affdae83d0dd60d61b",
+    "exit_code": 0,
+    "log": "/private/tmp/tunai-scoped-sqlite/3.8.10.2/test.log",
+    "scoped": {
+      "version": "3.8.10.2",
+      "exit_code": 0,
+      "log": "/tmp/tunai-scoped-sqlite/3.8.10.2/scoped_test.log"
+    }
+  },
+  {
+    "version": "3.9.2",
+    "source": "https://sqlite.org/2015/sqlite-amalgamation-3090200.zip",
+    "archive_sha256": "567139c94375e3808a11f34d81f534d0c257e2c498cddbf4cac283d74b51fe9c",
+    "exit_code": 0,
+    "log": "/private/tmp/tunai-scoped-sqlite/3.9.2/test.log",
+    "scoped": {
+      "version": "3.9.2",
+      "exit_code": 0,
+      "log": "/tmp/tunai-scoped-sqlite/3.9.2/scoped_test.log"
+    }
+  }
+]

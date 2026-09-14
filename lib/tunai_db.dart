@@ -15,3 +15,4 @@ export 'src/utils/query_helper.dart';
 export 'src/model/db_left_join.dart';
 export 'src/model/db_trigger.dart';
 export 'src/tunai_joined_db.dart';
+export 'src/model/db_initialization_result.dart';

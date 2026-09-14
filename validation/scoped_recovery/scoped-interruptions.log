@@ -1,0 +1,28 @@
+{"rows": 50000, "journal": "WAL", "phase": "created", "recovery": false, "delay": null, "seconds": 5.796, "peak_disk_bytes": 16491034, "peak_worker_rss_bytes": 133939200, "peak_journal_bytes": 32768, "killed": true, "opened": "old", "retry_ms": 576, "outcome": "ready"}
+{"rows": 50000, "journal": "WAL", "phase": "copy_1", "recovery": false, "delay": null, "seconds": 6.436, "peak_disk_bytes": 16491034, "peak_worker_rss_bytes": 133529600, "peak_journal_bytes": 32768, "killed": true, "opened": "old", "retry_ms": 753, "outcome": "ready"}
+{"rows": 50000, "journal": "WAL", "phase": "copy_20", "recovery": false, "delay": null, "seconds": 4.035, "peak_disk_bytes": 16491034, "peak_worker_rss_bytes": 155811840, "peak_journal_bytes": 32768, "killed": true, "opened": "old", "retry_ms": 736, "outcome": "ready"}
+{"rows": 50000, "journal": "WAL", "phase": "before_drop", "recovery": false, "delay": null, "seconds": 4.262, "peak_disk_bytes": 24990626, "peak_worker_rss_bytes": 158777344, "peak_journal_bytes": 8532360, "killed": true, "opened": "old", "retry_ms": 1684, "outcome": "ready"}
+{"rows": 50000, "journal": "WAL", "phase": "after_drop", "recovery": false, "delay": null, "seconds": 6.375, "peak_disk_bytes": 24998866, "peak_worker_rss_bytes": 150519808, "peak_journal_bytes": 8540600, "killed": true, "opened": "old", "retry_ms": 884, "outcome": "ready"}
+{"rows": 50000, "journal": "WAL", "phase": "before_commit", "recovery": false, "delay": null, "seconds": 5.521, "peak_disk_bytes": 25534466, "peak_worker_rss_bytes": 190775296, "peak_journal_bytes": 9076200, "killed": true, "opened": "old", "retry_ms": 462, "outcome": "ready"}
+{"rows": 50000, "journal": "WAL", "phase": "after_commit", "recovery": false, "delay": null, "seconds": 4.83, "peak_disk_bytes": 48085114, "peak_worker_rss_bytes": 189530112, "peak_journal_bytes": 16479840, "killed": true, "opened": "new", "retry_ms": 49, "outcome": "ready"}
+{"rows": 50000, "journal": "WAL", "phase": "recovery_drop", "recovery": true, "delay": null, "seconds": 4.809, "peak_disk_bytes": 16491034, "peak_worker_rss_bytes": 168886272, "peak_journal_bytes": 32768, "killed": true, "opened": "old", "retry_ms": 171, "outcome": "tablesRebuilt"}
+{"rows": 50000, "journal": "WAL", "phase": "after_commit", "recovery": true, "delay": null, "seconds": 3.603, "peak_disk_bytes": 16528146, "peak_worker_rss_bytes": 171819008, "peak_journal_bytes": 69880, "killed": true, "opened": "new", "retry_ms": 46, "outcome": "ready"}
+{"rows": 50000, "journal": "WAL", "phase": "active_copy", "recovery": false, "delay": 0.002, "seconds": 5.251, "peak_disk_bytes": 16491034, "peak_worker_rss_bytes": 134578176, "peak_journal_bytes": 32768, "killed": true, "opened": "old", "retry_ms": 1683, "outcome": "ready"}
+{"rows": 50000, "journal": "WAL", "phase": "active_copy", "recovery": false, "delay": 0.02, "seconds": 7.107, "peak_disk_bytes": 16491034, "peak_worker_rss_bytes": 146227200, "peak_journal_bytes": 32768, "killed": true, "opened": "old", "retry_ms": 1323, "outcome": "ready"}
+{"rows": 50000, "journal": "WAL", "phase": "active_copy", "recovery": false, "delay": 0.1, "seconds": 5.428, "peak_disk_bytes": 16491034, "peak_worker_rss_bytes": 134561792, "peak_journal_bytes": 32768, "killed": true, "opened": "old", "retry_ms": 845, "outcome": "ready"}
+Traceback (most recent call last):
+  File "/Users/han/flutter_packages/tunai_db-schema-recovery-docs/tool/test_persistence_stress.py", line 130, in <module>
+    main()
+  File "/Users/han/flutter_packages/tunai_db-schema-recovery-docs/tool/test_persistence_stress.py", line 109, in main
+    invoke(folder, 'verify', args.interrupt_rows, journal, expected=expected, recovery=recovery)
+  File "/Users/han/flutter_packages/tunai_db-schema-recovery-docs/tool/test_persistence_stress.py", line 38, in invoke
+    rss = subprocess.run(['ps', '-o', 'rss=', '-p', pidfile.read_text().strip()], capture_output=True, text=True).stdout.strip()
+  File "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/subprocess.py", line 507, in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+  File "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/subprocess.py", line 1134, in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+  File "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/subprocess.py", line 2021, in _communicate
+    stderr = self._translate_newlines(stderr,
+  File "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/subprocess.py", line 1011, in _translate_newlines
+    data = data.decode(encoding, errors)
+UnicodeDecodeError: 'utf-8' codec can't decode byte 0xa4 in position 26: invalid start byte
