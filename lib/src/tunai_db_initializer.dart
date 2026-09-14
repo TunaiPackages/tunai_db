@@ -107,6 +107,7 @@ class TunaiDBInitializer {
           await _initDB(
             uniqueKey,
             tables: tables,
+            updateDB: updateDB,
             resetDB: resetDB,
             readOnly: readOnly,
             singleInstance: singleInstance,
@@ -258,6 +259,7 @@ class TunaiDBInitializer {
   Future<void> _initDB(
     String uniqueKey, {
     required List<DBTable> tables,
+    required bool updateDB,
     bool resetDB = false,
     bool? readOnly = false,
     bool? singleInstance = true,
@@ -310,7 +312,8 @@ class TunaiDBInitializer {
           path,
           options: OpenDatabaseOptions(
             version: 1,
-            onCreate: (db, version) => _onCreate(db, version, tables),
+            onCreate: (db, version) => _onCreate(db, version, tables,
+                reconcileExistingSchema: updateDB),
             onConfigure: _onConfigure,
             readOnly: readOnly,
             singleInstance: singleInstance,
@@ -320,7 +323,8 @@ class TunaiDBInitializer {
         _database = await openDatabase(
           path,
           version: 1,
-          onCreate: (db, version) => _onCreate(db, version, tables),
+          onCreate: (db, version) =>
+              _onCreate(db, version, tables, reconcileExistingSchema: updateDB),
           onConfigure: _onConfigure,
           readOnly: readOnly,
           singleInstance: singleInstance,
@@ -385,7 +389,23 @@ class TunaiDBInitializer {
     }
   }
 
-  Future<void> _onCreate(Database db, int version, List<DBTable> tables) async {
+  Future<void> _onCreate(Database db, int version, List<DBTable> tables,
+      {required bool reconcileExistingSchema}) async {
+    // sqflite also calls onCreate for existing files with user_version=0.
+    // Do not create missing tables here: that would put schema changes outside
+    // the reconciler's rollback/recovery transaction for a partial old schema.
+    if (reconcileExistingSchema) {
+      final existing = await db.rawQuery(
+        "SELECT 1 FROM sqlite_master WHERE type IN ('table', 'view') "
+        "AND substr(name, 1, 7) != 'sqlite_' LIMIT 1",
+      );
+      if (existing.isNotEmpty) {
+        _logRecovery('schema_initialization: existing_schema_detected; '
+            'creation_deferred=true');
+        return;
+      }
+    }
+
     _stage = 'creating';
     _logRecovery(
         'schema_initialization: creation_started; tables=${tables.length}');

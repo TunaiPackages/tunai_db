@@ -135,3 +135,14 @@ stored state. Set `crucial: true` for data-loss, silent-success, login-upgrade o
 scope-isolation risks. Never change an assertion to accept a demonstrated bug.
 If a case uses a temporary second fixture, dispose it in `finally`. Do not add
 unbounded waits or cancel a case before its database operations finish.
+
+## Version-zero initialization regression suite
+
+`flutter test integration_test/version_zero_initialization_integration_test.dart
+-d macos` runs the seven package regression cases through native macOS SQLite.
+The same entry point can target iOS; Android uses the package's FFI backend.
+It covers populated preservation, partial schemas and conversion, scoped
+recovery with unrelated-row preservation, view conflicts, invalid target/retry,
+updateDB disabled, and empty-file creation. Every fixture uses a unique temporary
+database name and deletes only that fixture. This is separate from the lab's
+historical scenario counts.

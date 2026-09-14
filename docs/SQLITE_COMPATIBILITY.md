@@ -105,3 +105,13 @@ focused recovery regressions passed on all nine engines listed above, including
 transitive/cyclic FK closure, independent failures, retained parents/unrelated
 rows, empty primary-key changes and rollback. This retest used desktop engines;
 the earlier Android native results above were not rerun for this change.
+
+## Version-zero opening candidate retest
+
+The `fix/version-zero-initialization` candidate passed all nine historical
+engines above, with 481 tests per engine through 3.32.2 and 482 on 3.39.4,
+including seven new version-zero cases on each. Current-engine package suite:
+518 passed. Native macOS: seven new cases passed. See
+[version-zero validation](VERSION_ZERO_VALIDATION.md) for exact scope, source
+hash, initial harness correction and limitations. This is candidate evidence,
+not a POS dependency adoption record.

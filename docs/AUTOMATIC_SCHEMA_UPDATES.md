@@ -53,6 +53,28 @@ or application credentials. Initialization returns `DBInitializationResult.ready
 (for an explicit caller-requested reset). A thrown error means initialization
 did not complete; `hasInit` is false and the initializer exposes no handle.
 
+### Existing databases with version-zero metadata
+
+An existing SQLite file can contain tables or views while `user_version` is zero.
+For `updateDB: true`, the creation callback detects that existing user schema and
+defers all schema changes to normal reconciliation. Matching rows are retained;
+partial schemas migrate; incompatible tables follow the same scoped recovery and
+last-resort full replacement rules. Version zero alone never requests recovery.
+An empty file still follows normal creation. `updateDB: false` retains its existing
+creation behavior and does not silently enable reconciliation or recovery.
+
+The driver may stamp `user_version=1` before reconciliation begins. If preparation
+fails or the process stops afterward, the next open still reconciles because
+TunaiDB does not use this metadata as a successful-migration marker. Failed
+reconciliation rolls back its schema/data changes; initialization exposes no
+handle until it completes. This does not broaden recovery to corruption, storage
+or arbitrary opening failures.
+
+A normal info initialization event, `existing_schema_detected;
+creation_deferred=true`, records this decision. It is not a recovery event and
+contains no row data or paths. Normal reconciliation/recovery completion events
+still provide the outcome.
+
 ### Implemented recovery boundary
 
 `initDatabase(updateDB: true)` enables last-resort recovery for a nonempty complete
