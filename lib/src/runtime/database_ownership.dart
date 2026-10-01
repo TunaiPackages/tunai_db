@@ -41,12 +41,16 @@ class TunaiDBOwnership {
     final server = await _server();
     final notifications = ReceivePort();
     final token = notifications.sendPort;
-    // Register before requesting ownership, so cancellation cannot leave an
-    // acquired lease without an exit notification.
-    Isolate.current.addOnExitListener(server, response: ['exited', token]);
+    // Exit listeners are keyed by destination port. Every attempt from this
+    // isolate registers the same identity, so rejection cannot replace/remove
+    // an accepted lease's cleanup. Keep it until the isolate exits.
+    final isolatePort = Isolate.current.controlPort;
+    Isolate.current
+        .addOnExitListener(server, response: ['exited', isolatePort]);
     final lease = TunaiDBBackgroundLease._(server, notifications);
     try {
-      final accepted = await _request(server, 'background', token);
+      final accepted =
+          await _request(server, 'background', [token, isolatePort]);
       if (accepted == true) return lease;
       lease._dispose();
       return null;
@@ -114,7 +118,6 @@ class TunaiDBBackgroundLease {
 
   void _dispose() {
     _revoked = true;
-    Isolate.current.removeOnExitListener(_server);
     _notifications.close();
   }
 }
@@ -157,8 +160,9 @@ class _Pending {
 }
 
 class _Owner {
-  _Owner(this.token);
+  _Owner(this.token, this.isolatePort);
   final SendPort token;
+  final SendPort isolatePort;
   bool active = true;
   final ids = <int>{};
   final pending = <_Pending>{};
@@ -190,13 +194,19 @@ class _Coordinator {
           if (foreground || owner != null) {
             reply!.send({'result': false});
           } else {
-            owner = _Owner(args as SendPort);
+            final claim = args as List;
+            owner = _Owner(claim[0] as SendPort, claim[1] as SendPort);
             reply!.send({'result': true});
           }
         case 'release':
         case 'exited':
           final old = owner;
-          if (old != null && old.token == args) await closeOwner(old);
+          if (old != null &&
+              (command == 'exited'
+                  ? old.isolatePort == args
+                  : old.token == args)) {
+            await closeOwner(old);
+          }
           reply?.send({'result': true});
         case 'database':
           await database(args as List, reply!);
