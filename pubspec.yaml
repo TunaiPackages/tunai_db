@@ -12,7 +12,9 @@ dependencies:
     sdk: flutter
 
   sqflite: ^2.4.3
-  sqflite_common_ffi: ^2.4.2
+  # Background ownership integrates with the pinned transport internals.
+  sqflite_common: 2.5.11
+  sqflite_common_ffi: 2.4.2+1
   sqlite3: ^3.3.2
   path: ^1.9.1
   path_provider: ^2.1.5
