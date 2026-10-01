@@ -87,6 +87,7 @@ class TunaiDBInitializer {
     bool updateDB = true,
     bool? readOnly = false,
     bool? singleInstance = true,
+    DatabaseFactory? factory,
   }) =>
       _initializationLock.synchronized(() async {
         _preparing = true;
@@ -111,6 +112,7 @@ class TunaiDBInitializer {
             resetDB: resetDB,
             readOnly: readOnly,
             singleInstance: singleInstance,
+            factory: factory,
           );
           var result = DBInitializationResult.ready;
           if (updateDB) {
@@ -263,6 +265,7 @@ class TunaiDBInitializer {
     bool resetDB = false,
     bool? readOnly = false,
     bool? singleInstance = true,
+    DatabaseFactory? factory,
   }) async {
     try {
       String dbName = '${_dbName}_$uniqueKey.db';
@@ -288,7 +291,9 @@ class TunaiDBInitializer {
       }
 
       _logRecovery('schema_initialization: path_resolved');
-      bool databaseExist = await databaseExists(path);
+      final selectedFactory =
+          factory ?? (useFFI ? databaseFactoryFfi : databaseFactory);
+      bool databaseExist = await selectedFactory.databaseExists(path);
       _logRecovery(
           'schema_initialization: file_checked; exists=$databaseExist');
 
@@ -303,33 +308,21 @@ class TunaiDBInitializer {
         }
       } else if (resetDB) {
         _logRecovery('schema_initialization: explicit_reset_started');
-        await deleteDatabase(path);
+        await selectedFactory.deleteDatabase(path);
         _logRecovery('schema_initialization: explicit_reset_completed');
       }
 
-      if (useFFI) {
-        _database = await databaseFactoryFfi.openDatabase(
-          path,
-          options: OpenDatabaseOptions(
-            version: 1,
-            onCreate: (db, version) => _onCreate(db, version, tables,
-                reconcileExistingSchema: updateDB),
-            onConfigure: _onConfigure,
-            readOnly: readOnly,
-            singleInstance: singleInstance,
-          ),
-        );
-      } else {
-        _database = await openDatabase(
-          path,
+      _database = await selectedFactory.openDatabase(
+        path,
+        options: OpenDatabaseOptions(
           version: 1,
           onCreate: (db, version) =>
               _onCreate(db, version, tables, reconcileExistingSchema: updateDB),
           onConfigure: _onConfigure,
           readOnly: readOnly,
           singleInstance: singleInstance,
-        );
-      }
+        ),
+      );
 
       _stage = 'opening';
       final result = await _database!.rawQuery('SELECT sqlite_version();');
